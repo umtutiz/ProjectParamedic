@@ -436,8 +436,9 @@ GameObject:
   m_Component:
   - component: {fileID: 1235458329}
   - component: {fileID: 1235458328}
-  - component: {fileID: 1235458327}
-  - component: {fileID: 1235458330}
+  - component: {fileID: 1235458331}
+  - component: {fileID: 1235458333}
+  - component: {fileID: 1235458334}
   m_Layer: 0
   m_Name: NetworkManager
   m_TagString: Untagged
@@ -445,33 +446,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1235458327
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1235458326}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6960e84d07fb87f47956e7a81d71c4e6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_ProtocolType: 0
-  m_MaxPacketQueueSize: 128
-  m_MaxPayloadSize: 6144
-  m_HeartbeatTimeoutMS: 500
-  m_ConnectTimeoutMS: 1000
-  m_MaxConnectAttempts: 60
-  m_DisconnectTimeoutMS: 30000
-  ConnectionData:
-    Address: 127.0.0.1
-    Port: 7777
-    ServerListenAddress: 127.0.0.1
-  DebugSimulator:
-    PacketDelayMS: 0
-    PacketJitterMS: 0
-    PacketDropRate: 0
 --- !u!114 &1235458328
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -486,7 +460,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   NetworkConfig:
     ProtocolVersion: 0
-    NetworkTransport: {fileID: 1235458327}
+    NetworkTransport: {fileID: 1235458331}
     PlayerPrefab: {fileID: 1956857221276865421, guid: a3ecad10f6341f6448e8ed99b9d8df22,
       type: 3}
     Prefabs:
@@ -525,7 +499,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1235458330
+--- !u!114 &1235458331
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -534,7 +508,32 @@ MonoBehaviour:
   m_GameObject: {fileID: 1235458326}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9272b3a46588f7c49a2042f73824cfb1, type: 3}
+  m_Script: {fileID: 11500000, guid: 10b26fef8c02e744088ce568e3c0d50a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  TargetSteamId: 0
+--- !u!114 &1235458333
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1235458326}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d321e9dcc3acc204b991ac3239f45a3a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &1235458334
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1235458326}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 60963b63c85771649950fd5f3e01e7b9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!1 &1471661092

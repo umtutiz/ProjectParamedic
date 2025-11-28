@@ -12,21 +12,24 @@ public class PlayerInteraction : NetworkBehaviour
 
     void Update()
     {
-        // 1. HER KAREDE POZÝSYON GÜNCELLEME (KÝLÝT NOKTA BURASI)
-        // Eðer elimde bir þey varsa, onu zorla el noktasýna ýþýnla
-        if (currentHeldObject != null)
-        {
-            currentHeldObject.transform.position = handPoint.position;
-            currentHeldObject.transform.rotation = handPoint.rotation;
-        }
-
         if (!IsOwner) return;
 
-        // E tuþuna basma kontrolü
+        // E TUÞU: Sadece YERDEYSE al
         if (Input.GetKeyDown(KeyCode.E))
         {
-            if (currentHeldObject == null) TryGrab();
-            else DropObject();
+            if (currentHeldObject == null)
+            {
+                TryGrab();
+            }
+        }
+
+        // G TUÞU: Sadece ELÝMDEYSE býrak
+        if (Input.GetKeyDown(KeyCode.G))
+        {
+            if (currentHeldObject != null)
+            {
+                DropObject();
+            }
         }
     }
 
@@ -39,7 +42,8 @@ public class PlayerInteraction : NetworkBehaviour
         {
             if (hit.transform.CompareTag("Grabbable"))
             {
-                NetworkObject targetNetObj = hit.transform.GetComponent<NetworkObject>();
+                NetworkObject targetNetObj = hit.transform.GetComponentInParent<NetworkObject>();
+
                 if (targetNetObj != null)
                 {
                     RequestGrabServerRpc(targetNetObj.NetworkObjectId);
@@ -61,8 +65,7 @@ public class PlayerInteraction : NetworkBehaviour
     {
         if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(objectId, out NetworkObject networkObject))
         {
-            // DÜZELTME: Sunucu sadece "Player"a baðlasýn (Çünkü HandPoint'i tanýmaz)
-            networkObject.TrySetParent(transform);
+            networkObject.ChangeOwnership(OwnerClientId);
             GrabClientRpc(objectId);
         }
     }
@@ -72,7 +75,7 @@ public class PlayerInteraction : NetworkBehaviour
     {
         if (currentHeldObject != null)
         {
-            currentHeldObject.TryRemoveParent();
+            currentHeldObject.RemoveOwnership();
             DropClientRpc();
         }
     }
@@ -84,12 +87,25 @@ public class PlayerInteraction : NetworkBehaviour
         {
             currentHeldObject = networkObject;
 
-            // FÝZÝKLERÝ KAPAT
-            var rb = currentHeldObject.GetComponent<Rigidbody>();
-            if (rb != null) rb.isKinematic = true;
+            Rigidbody targetRb = currentHeldObject.GetComponentInChildren<Rigidbody>();
 
-            var col = currentHeldObject.GetComponent<Collider>();
-            if (col != null) col.enabled = false;
+            if (targetRb != null)
+            {
+                // Önce elime ýþýnla ki uzaktan çekmesin
+                targetRb.transform.position = handPoint.position;
+
+                // Fiziði AÇIK tut (Sallanmasý için)
+                targetRb.isKinematic = false;
+
+                // Colliderlarý AÇIK tut (Yerin dibine girmesin diye)
+                var cols = currentHeldObject.GetComponentsInChildren<Collider>();
+                foreach (var col in cols) col.enabled = true;
+
+                // Eklemle baðla
+                FixedJoint joint = targetRb.gameObject.AddComponent<FixedJoint>();
+                joint.breakForce = 20000;
+                joint.connectedBody = handPoint.GetComponent<Rigidbody>();
+            }
         }
     }
 
@@ -98,16 +114,16 @@ public class PlayerInteraction : NetworkBehaviour
     {
         if (currentHeldObject != null)
         {
-            // FÝZÝKLERÝ AÇ
-            var rb = currentHeldObject.GetComponent<Rigidbody>();
-            if (rb != null)
-            {
-                rb.isKinematic = false;
-                rb.AddForce(Camera.main.transform.forward * 3f, ForceMode.Impulse); // Baktýðýn yere fýrlat
-            }
+            Rigidbody targetRb = currentHeldObject.GetComponentInChildren<Rigidbody>();
 
-            var col = currentHeldObject.GetComponent<Collider>();
-            if (col != null) col.enabled = true;
+            if (targetRb != null)
+            {
+                FixedJoint joint = targetRb.GetComponent<FixedJoint>();
+                if (joint != null) Destroy(joint);
+
+                targetRb.velocity = Vector3.zero;
+                targetRb.AddForce(Camera.main.transform.forward * 5f, ForceMode.Impulse);
+            }
 
             currentHeldObject = null;
         }

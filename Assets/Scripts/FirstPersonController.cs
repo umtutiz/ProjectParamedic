@@ -1,28 +1,44 @@
 using Unity.Netcode;
 using UnityEngine;
 
+[RequireComponent(typeof(CharacterController))]
 public class FirstPersonController : NetworkBehaviour
 {
-    [Header("Ayarlar")]
+    [Header("Hareket Ayarlarý")]
     public float moveSpeed = 5f;
+    public float runSpeed = 8f;
+    public float jumpHeight = 2.0f;
+    public float gravity = -30f; // Yer çekimi
+
+    [Header("Kamera Ayarlarý")]
     public float mouseSensitivity = 2f;
+    public Transform cameraRoot;
 
-    [Header("Referanslar")]
-    public Transform cameraRoot; // Kafa objesi buraya gelecek
+    private CharacterController controller;
+    private float xRotation = 0f;
+    private Vector3 velocity;
+    private bool isGrounded;
 
-    private float xRotation = 0f; // Yukarý aþaðý bakma açýsý
-
+    // --- BURASI DEÐÝÞTÝ ---
     public override void OnNetworkSpawn()
     {
         if (IsOwner)
         {
-            // Eðer bu karakter benimse, sahnedeki Ana Kamerayý bul ve Kafamýn içine sok
-            Transform cameraTransform = Camera.main.transform;
-            cameraTransform.parent = cameraRoot; // Kamerayý kafanýn çocuðu yap
-            cameraTransform.localPosition = Vector3.zero; // Tam kafanýn ortasýna oturt
-            cameraTransform.localRotation = Quaternion.identity; // Açýsýný sýfýrla
+            // 1. Lobi Kamerasýný Bul ve Kapat
+            GameObject lobbyCam = GameObject.Find("LobbyCamera");
+            if (lobbyCam != null)
+            {
+                lobbyCam.SetActive(false);
+            }
 
-            // Fareyi ekrana kilitle ve gizle (FPS modu)
+            // 2. Karakter Hazýrlýðý
+            controller = GetComponent<CharacterController>();
+
+            Transform cameraTransform = Camera.main.transform;
+            cameraTransform.parent = cameraRoot;
+            cameraTransform.localPosition = Vector3.zero;
+            cameraTransform.localRotation = Quaternion.identity;
+
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
         }
@@ -30,20 +46,36 @@ public class FirstPersonController : NetworkBehaviour
 
     void Update()
     {
-        if (!IsOwner) return; // Baþkasýnýn karakterini kontrol etme
+        if (!IsOwner) return;
 
-        HandleMovement();
         HandleMouseLook();
+        HandleMovement();
     }
 
     void HandleMovement()
     {
-        float x = Input.GetAxis("Horizontal"); // A-D
-        float z = Input.GetAxis("Vertical");   // W-S
+        isGrounded = controller.isGrounded;
 
-        // Baktýðým yöne doðru hareket et
+        if (isGrounded && velocity.y < 0)
+        {
+            velocity.y = -2f;
+        }
+
+        float x = Input.GetAxis("Horizontal");
+        float z = Input.GetAxis("Vertical");
+
+        float currentSpeed = Input.GetKey(KeyCode.LeftShift) ? runSpeed : moveSpeed;
+
         Vector3 move = transform.right * x + transform.forward * z;
-        transform.position += move * moveSpeed * Time.deltaTime;
+        controller.Move(move * currentSpeed * Time.deltaTime);
+
+        if (Input.GetButtonDown("Jump") && isGrounded)
+        {
+            velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
+        }
+
+        velocity.y += gravity * Time.deltaTime;
+        controller.Move(velocity * Time.deltaTime);
     }
 
     void HandleMouseLook()
@@ -51,13 +83,10 @@ public class FirstPersonController : NetworkBehaviour
         float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
         float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity;
 
-        // Yukarý-Aþaðý bakma (Kafayý döndürür)
         xRotation -= mouseY;
-        xRotation = Mathf.Clamp(xRotation, -90f, 90f); // Boynu kýrmamak için sýnýrla
+        xRotation = Mathf.Clamp(xRotation, -90f, 90f);
 
         cameraRoot.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
-
-        // Saða-Sola bakma (Tüm vücudu döndürür)
         transform.Rotate(Vector3.up * mouseX);
     }
 }

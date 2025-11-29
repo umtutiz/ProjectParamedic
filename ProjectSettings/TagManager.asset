@@ -5,6 +5,7 @@ TagManager:
   serializedVersion: 2
   tags:
   - Grabbable
+  - Car
   layers:
   - Default
   - TransparentFX

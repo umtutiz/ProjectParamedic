@@ -253,9 +253,9 @@ GameObject:
   - component: {fileID: 602749043}
   - component: {fileID: 602749042}
   - component: {fileID: 602749040}
-  - component: {fileID: 602749041}
   - component: {fileID: 602749047}
   - component: {fileID: 602749046}
+  - component: {fileID: 602749048}
   m_Layer: 6
   m_Name: Cube
   m_TagString: Untagged
@@ -286,18 +286,6 @@ MonoBehaviour:
   AutoObjectParentSync: 1
   SyncOwnerTransformWhenParented: 1
   AllowOwnerToParent: 0
---- !u!114 &602749041
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 602749039}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 07863c3222f17b04db32289356107bdb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!65 &602749042
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -305,7 +293,7 @@ BoxCollider:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 602749039}
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 13400000, guid: 013791ad418e2e2409058a02793cc9da, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -396,6 +384,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 48e4c57e08a2c864abba6f5f36b1f6f1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  inHandScale: {x: 0.3, y: 0.3, z: 0.3}
 --- !u!54 &602749047
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -423,6 +412,37 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
+--- !u!114 &602749048
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 602749039}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e96cb6065543e43c4a752faaa1468eb1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  UseUnreliableDeltas: 0
+  SyncPositionX: 1
+  SyncPositionY: 1
+  SyncPositionZ: 1
+  SyncRotAngleX: 1
+  SyncRotAngleY: 1
+  SyncRotAngleZ: 1
+  SyncScaleX: 1
+  SyncScaleY: 1
+  SyncScaleZ: 1
+  PositionThreshold: 0.001
+  RotAngleThreshold: 0.01
+  ScaleThreshold: 0.01
+  UseQuaternionSynchronization: 0
+  UseQuaternionCompression: 0
+  UseHalfFloatPrecision: 0
+  InLocalSpace: 1
+  Interpolate: 1
+  SlerpPosition: 0
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0

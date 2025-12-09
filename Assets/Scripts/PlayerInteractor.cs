@@ -8,26 +8,8 @@ public class PlayerInteractor : NetworkBehaviour
     [SerializeField] private float interactDistance = 4f;
     [SerializeField] private LayerMask interactLayer;
 
-    // Burasý boþ kalýrsa kod otomatik bulmaya çalýþacak
-    [SerializeField] private Transform handHoldPoint;
-
-    public override void OnNetworkSpawn()
-    {
-        // DÜZELTME: "IsOwner" þartýný kaldýrdýk. 
-        // Artýk Server da dahil herkes elin nerede olduðunu bilecek.
-        if (handHoldPoint == null)
-        {
-            // Eðer inspector'dan atamazsan isminden bulmaya çalýþýr
-            // NOT: Hiyerarþide Player -> Main Camera -> HandHoldPoint sýrasýnda olmalý
-            handHoldPoint = transform.Find("Main Camera/HandHoldPoint");
-
-            // Eðer hala bulamadýysa (isim farklýysa vs.) hata vermesin diye uyarý atalým
-            if (handHoldPoint == null)
-            {
-                Debug.LogError("HATA: 'HandHoldPoint' bulunamadý! Lütfen Player Prefab'ýnda PlayerInteractor scriptine elle sürükle.");
-            }
-        }
-    }
+    // ÞU AN ELÝMDE NE VAR? (Server tarafýnda tutulur)
+    private NetworkPickable currentHeldItem;
 
     private void Update()
     {
@@ -48,16 +30,22 @@ public class PlayerInteractor : NetworkBehaviour
 
     private void TryInteract()
     {
+        // Eðer zaten elim doluysa yeni bir þey alma!
+        // (Server'a sormadan önce client tarafýnda basit kontrol)
+        if (currentHeldItem != null)
+        {
+            Debug.Log("Zaten elinde bir þey var, önce onu býrak.");
+            return;
+        }
+
         Ray ray = new Ray(cameraRoot.position, cameraRoot.forward);
         RaycastHit hit;
 
         if (Physics.Raycast(ray, out hit, interactDistance, interactLayer))
         {
-            IInteractable interactable = hit.collider.GetComponent<IInteractable>();
-            if (interactable != null)
+            if (hit.collider.TryGetComponent(out NetworkObject netObj))
             {
-                // Sunucuya 'Ben buna týkladým' diyoruz
-                InteractServerRpc(hit.collider.GetComponent<NetworkObject>().NetworkObjectId);
+                InteractServerRpc(netObj.NetworkObjectId);
             }
         }
     }
@@ -70,18 +58,21 @@ public class PlayerInteractor : NetworkBehaviour
     [ServerRpc]
     private void InteractServerRpc(ulong objectId)
     {
-        // HATA BURADAYDI: handHoldPoint null olduðu için patlýyordu.
-        if (handHoldPoint == null) return;
+        if (currentHeldItem != null) return; // Zaten doluysak alma
 
         if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(objectId, out NetworkObject netObj))
         {
-            // Eðer elimiz boþsa al
-            if (handHoldPoint.childCount == 0)
+            var interactable = netObj.GetComponent<IInteractable>();
+            var pickable = netObj.GetComponent<NetworkPickable>(); // BU SATIR ÖNEMLÝ
+
+            if (interactable != null)
             {
-                var interactable = netObj.GetComponent<IInteractable>();
-                if (interactable != null)
+                interactable.Interact(OwnerClientId);
+
+                // EÞYAYI HAFIZAYA ALIYORUZ KÝ G TUÞU NEYÝ ATACAÐINI BÝLSÝN
+                if (pickable != null)
                 {
-                    interactable.Interact(OwnerClientId);
+                    currentHeldItem = pickable;
                 }
             }
         }
@@ -90,18 +81,14 @@ public class PlayerInteractor : NetworkBehaviour
     [ServerRpc]
     private void DropServerRpc()
     {
-        if (handHoldPoint == null) return;
-
-        // Elimizde bir þey var mý?
-        if (handHoldPoint.childCount > 0)
+        // Hafýzada tuttuðumuz eþya var mý?
+        if (currentHeldItem != null)
         {
-            Transform heldObject = handHoldPoint.GetChild(0);
-            NetworkPickable pickable = heldObject.GetComponent<NetworkPickable>();
+            // Varsa býrakma fonksiyonunu çaðýr
+            currentHeldItem.DropItem();
 
-            if (pickable != null)
-            {
-                pickable.DropItem();
-            }
+            // Hafýzayý temizle (Elimiz artýk boþ)
+            currentHeldItem = null;
         }
     }
 }

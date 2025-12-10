@@ -7,41 +7,37 @@ using UnityEngine;
 public class NetworkPickable : NetworkBehaviour, IInteractable
 {
     private Rigidbody rb;
-    private Collider col;
+    private Collider col; // Tek collider referansý
+    private Collider[] allColliders; // Eðer birden fazla varsa (Ragdoll vb.)
     private NetworkTransform netTransform;
 
-    private Transform targetHandPoint; // Hedef nokta
+    private Transform targetHandPoint;
 
-    // YENÝ AYAR: Eline alýnca boyutu ne olsun? (0.3 idealdýr)
-    [SerializeField] private Vector3 inHandScale = new Vector3(0.3f, 0.3f, 0.3f);
-    private Vector3 originalScale; // Yere atýnca eski boyutuna dönsün
+    [SerializeField] private Vector3 inHandScale = Vector3.one;
+    private Vector3 originalScale;
 
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
         col = GetComponent<Collider>();
+        allColliders = GetComponentsInChildren<Collider>(); // Tüm colliderlarý bul
         netTransform = GetComponent<NetworkTransform>();
-        originalScale = transform.localScale; // Baþlangýç boyutunu hafýzaya al
+        originalScale = transform.localScale;
     }
 
-    public string GetInteractText()
-    {
-        return "Al";
-    }
+    public string GetInteractText() => "Taþý";
 
-    public void Interact(ulong playerID)
-    {
-        PickUpServerRpc(playerID);
-    }
+    public void Interact(ulong playerID) => PickUpServerRpc(playerID);
 
-    private void Update()
+    // DEÐÝÞÝKLÝK BURADA: LateUpdate kullanýyoruz!
+    // Karakter hareketini tamamladýktan SONRA eþyayý ýþýnlarýz ki geride kalmasýn.
+    private void LateUpdate()
     {
-        // Eldeyse sürekli pozisyonu, açýyý VE BOYUTU zorla ayarla
         if (targetHandPoint != null)
         {
             transform.position = targetHandPoint.position;
             transform.rotation = targetHandPoint.rotation;
-            transform.localScale = inHandScale; // BÜYÜMEYÝ ENGELLEYEN SATIR
+            transform.localScale = inHandScale;
         }
     }
 
@@ -55,13 +51,15 @@ public class NetworkPickable : NetworkBehaviour, IInteractable
             if (foundHand != null)
             {
                 rb.isKinematic = true;
-                col.enabled = false;
+
+                // TÜM COLLIDERLARI KAPAT (Çok önemli, yoksa seni iter!)
+                if (col) col.enabled = false;
+                foreach (var c in allColliders) c.enabled = false;
+
                 if (netTransform) netTransform.enabled = false;
 
-                // Player'a baðla
+                // Fake Parent mantýðý
                 NetworkObject.TrySetParent(client.PlayerObject.transform, false);
-
-                // Clientlara hedefi göster
                 SetTargetClientRpc(playerID);
             }
         }
@@ -75,27 +73,23 @@ public class NetworkPickable : NetworkBehaviour, IInteractable
         NetworkObject.TrySetParent((GameObject)null);
 
         rb.isKinematic = false;
-        col.enabled = true;
+
+        // TÜM COLLIDERLARI AÇ
+        if (col) col.enabled = true;
+        foreach (var c in allColliders) c.enabled = true;
+
         if (netTransform) netTransform.enabled = true;
 
-        // --- DEÐÝÞEN KISIM: KOMÝK FÝZÝK ---
-
-        // 1. ESKÝ BOYUTUNA DÖN
+        // Fýrlatýrken boyutu düzelt
         transform.localScale = originalScale;
 
-        // 2. DELÝ GÝBÝ DÖNDÜR (Random Tork)
-        // Her seferinde rastgele bir yöne fýrýldak gibi döner
-        Vector3 randomSpin = new Vector3(
-            Random.Range(-10f, 10f),
-            Random.Range(-10f, 10f),
-            Random.Range(-10f, 10f)
-        );
-        rb.AddTorque(randomSpin, ForceMode.Impulse);
+        // SÜRTÜNMEYÝ AZALT (Hýzlý düþsün)
+        rb.drag = 0.05f;
 
-        // 3. YERE ÇAK (Smaç Bas)
-        // transform.forward * 2f -> Hafif ileri gitsin (ayaðýna düþmesin)
-        // Vector3.down * 8f     -> Yere füze gibi insin (HIZ BURADA)
-        rb.AddForce(transform.forward * 2f + Vector3.down * 8f, ForceMode.Impulse);
+        // FIRLAT
+        Vector3 throwForce = transform.forward * 12f + Vector3.up * 2f;
+        rb.AddForce(throwForce, ForceMode.Impulse);
+        rb.AddTorque(Random.insideUnitSphere * 10f, ForceMode.Impulse);
     }
 
     [ClientRpc]
@@ -105,7 +99,11 @@ public class NetworkPickable : NetworkBehaviour, IInteractable
         {
             targetHandPoint = FindDeepChild(client.PlayerObject.transform, "HandHoldPoint");
             if (rb) rb.isKinematic = true;
+
+            // Client tarafýnda da colliderlarý kapat
             if (col) col.enabled = false;
+            foreach (var c in allColliders) c.enabled = false;
+
             if (netTransform) netTransform.enabled = false;
         }
     }
@@ -115,8 +113,12 @@ public class NetworkPickable : NetworkBehaviour, IInteractable
     {
         targetHandPoint = null;
         if (rb) rb.isKinematic = false;
+
+        // Client tarafýnda colliderlarý aç
         if (col) col.enabled = true;
-        transform.localScale = originalScale; // Client tarafýnda da boyutu düzelt
+        foreach (var c in allColliders) c.enabled = true;
+
+        transform.localScale = originalScale;
     }
 
     private Transform FindDeepChild(Transform parent, string name)

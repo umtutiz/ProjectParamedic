@@ -8,7 +8,7 @@ public class PlayerInteractor : NetworkBehaviour
     [SerializeField] private float interactDistance = 4f;
     [SerializeField] private LayerMask interactLayer;
 
-    // ÞU AN ELÝMDE NE VAR? (Server tarafýnda tutulur)
+    // ÞU AN ELÝMDE NE VAR?
     private NetworkPickable currentHeldItem;
 
     private void Update()
@@ -30,11 +30,9 @@ public class PlayerInteractor : NetworkBehaviour
 
     private void TryInteract()
     {
-        // Eðer zaten elim doluysa yeni bir þey alma!
-        // (Server'a sormadan önce client tarafýnda basit kontrol)
         if (currentHeldItem != null)
         {
-            Debug.Log("Zaten elinde bir þey var, önce onu býrak.");
+            Debug.Log("Zaten elinde bir þey var.");
             return;
         }
 
@@ -43,9 +41,14 @@ public class PlayerInteractor : NetworkBehaviour
 
         if (Physics.Raycast(ray, out hit, interactDistance, interactLayer))
         {
-            if (hit.collider.TryGetComponent(out NetworkObject netObj))
+            // --- KRÝTÝK DEÐÝÞÝKLÝK BURADA ---
+            // Sadece çarptýðým objeye deðil, onun BABASINA (Parent) da bak!
+            // Çünkü scriptimiz kol/bacakta deðil, ana kutuda duruyor.
+            if (hit.collider.GetComponentInParent<NetworkObject>() != null)
             {
-                InteractServerRpc(netObj.NetworkObjectId);
+                // ID'yi babadan al
+                ulong objectId = hit.collider.GetComponentInParent<NetworkObject>().NetworkObjectId;
+                InteractServerRpc(objectId);
             }
         }
     }
@@ -58,18 +61,17 @@ public class PlayerInteractor : NetworkBehaviour
     [ServerRpc]
     private void InteractServerRpc(ulong objectId)
     {
-        if (currentHeldItem != null) return; // Zaten doluysak alma
+        if (currentHeldItem != null) return;
 
         if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(objectId, out NetworkObject netObj))
         {
             var interactable = netObj.GetComponent<IInteractable>();
-            var pickable = netObj.GetComponent<NetworkPickable>(); // BU SATIR ÖNEMLÝ
+            var pickable = netObj.GetComponent<NetworkPickable>();
 
             if (interactable != null)
             {
                 interactable.Interact(OwnerClientId);
 
-                // EÞYAYI HAFIZAYA ALIYORUZ KÝ G TUÞU NEYÝ ATACAÐINI BÝLSÝN
                 if (pickable != null)
                 {
                     currentHeldItem = pickable;
@@ -81,13 +83,9 @@ public class PlayerInteractor : NetworkBehaviour
     [ServerRpc]
     private void DropServerRpc()
     {
-        // Hafýzada tuttuðumuz eþya var mý?
         if (currentHeldItem != null)
         {
-            // Varsa býrakma fonksiyonunu çaðýr
             currentHeldItem.DropItem();
-
-            // Hafýzayý temizle (Elimiz artýk boþ)
             currentHeldItem = null;
         }
     }

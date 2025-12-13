@@ -3,26 +3,37 @@ using UnityEngine;
 
 public class PlayerGrab : NetworkBehaviour
 {
-    public Transform handPosition;
-    public float grabRadius = 1.0f;
-    public float grabDistance = 4f;
-    public float throwForce = 15f;
+    [Header("Ayarlar")]
+    public Transform holdPoint; // KAMERANIN ALTINDAKÝ NOKTA (Bunu atamayý unutma!)
+    public float grabRadius = 0.8f;
+    public float grabDistance = 5f;
+    public float throwForce = 20f;
     public LayerMask interactableLayer;
 
-    // KÝLÝTLENMEYÝ VE ÝÇ ÝÇE GÝRMEYÝ ÖNLEYEN YAY
+    [Header("Fizik Ayarlarý")]
+    public float holdSpring = 200f;  // Yayýn gücü (Daha sýký tutuþ)
+    public float holdDamper = 10f;   // Titremeyi önleme
+    public float heldObjectDrag = 10f; // Tutarken eþya aðýrlaþsýn (Sallanmasýn)
+    public float heldObjectAngularDrag = 10f; // Dönmesi yavaþlasýn
+
     private SpringJoint currentJoint;
     private GrabbableObject currentGrabbedObject;
     private Collider myCollider;
+    private float initialObjectDrag;
+    private float initialObjectAngularDrag;
 
     public override void OnNetworkSpawn()
     {
-        // Start yerine burayý kullanmak multiplayerda daha güvenlidir
         myCollider = GetComponent<Collider>();
     }
 
     void Update()
     {
         if (!IsOwner) return;
+
+        // DEBUG: HoldPoint'i gör
+       // if (holdPoint != null)
+            Debug.DrawLine(Camera.main.transform.position, holdPoint.position, Color.cyan);
 
         // E TUÞU: Tut
         if (Input.GetKeyDown(KeyCode.E))
@@ -33,7 +44,6 @@ public class PlayerGrab : NetworkBehaviour
         // G TUÞU: Býrak
         if (Input.GetKeyDown(KeyCode.G))
         {
-            // Eðer elimizde obje varsa býrak, yoksa hata mesajý verme
             if (currentGrabbedObject != null) Drop();
         }
 
@@ -42,17 +52,42 @@ public class PlayerGrab : NetworkBehaviour
         {
             Throw();
         }
+
+        // MOUSE TEKERLEÐÝ: Eþyayý Ýleri/Geri Al
+        if (currentGrabbedObject != null)
+        {
+            float scroll = Input.GetAxis("Mouse ScrollWheel");
+            if (scroll != 0)
+            {
+                // HoldPoint'in Z pozisyonunu deðiþtir (Min 1.5m, Max 4m)
+                Vector3 localPos = holdPoint.localPosition;
+                localPos.z += scroll * 2f;
+                localPos.z = Mathf.Clamp(localPos.z, 1.5f, 4f);
+                holdPoint.localPosition = localPos;
+            }
+        }
+    }
+
+    // FÝZÝK GÜNCELLEMESÝ (HAVAYA KALDIRMA BURADA OLUYOR)
+    void FixedUpdate()
+    {
+        if (!IsOwner || currentJoint == null || holdPoint == null) return;
+
+        // Yayýn oyuncudaki ucunu (Anchor) HoldPoint'in olduðu yere taþý
+        // InverseTransformPoint: Dünya pozisyonunu, oyuncunun local pozisyonuna çevirir
+        currentJoint.anchor = transform.InverseTransformPoint(holdPoint.position);
     }
 
     void TryGrab()
     {
-        Vector3 rayOrigin = transform.position + Vector3.up * 0.4f;
-        Vector3 direction = (transform.forward + Vector3.down * 0.2f).normalized;
+        if (Camera.main == null) return;
 
+        Transform camTransform = Camera.main.transform;
         RaycastHit hit;
-        if (Physics.SphereCast(rayOrigin, grabRadius, direction, out hit, grabDistance, interactableLayer))
+
+        // SphereCast ile ara
+        if (Physics.SphereCast(camTransform.position, grabRadius, camTransform.forward, out hit, grabDistance, interactableLayer))
         {
-            // Hem objede hem parentýnda ara (Garanti olsun)
             GrabbableObject grabbable = hit.transform.GetComponentInParent<GrabbableObject>();
             if (grabbable == null) grabbable = hit.transform.GetComponentInChildren<GrabbableObject>();
 
@@ -69,10 +104,19 @@ public class PlayerGrab : NetworkBehaviour
 
         if (currentGrabbedObject != null)
         {
+            // Eski fizik deðerlerini geri yükle (Kayganlýðý geri gelsin)
+            Rigidbody rb = currentGrabbedObject.GetComponent<Rigidbody>();
+            if (rb == null) rb = currentGrabbedObject.GetComponentInChildren<Rigidbody>();
+
+            if (rb != null)
+            {
+                rb.drag = initialObjectDrag;
+                rb.angularDrag = initialObjectAngularDrag;
+            }
+
             ToggleCollision(currentGrabbedObject.gameObject, true);
             RequestDropServerRpc(currentGrabbedObject.NetworkObjectId);
-            currentGrabbedObject = null; // Deðiþkeni boþalt
-            Debug.Log("Obje Býrakýldý.");
+            currentGrabbedObject = null;
         }
     }
 
@@ -81,10 +125,11 @@ public class PlayerGrab : NetworkBehaviour
         if (currentGrabbedObject != null)
         {
             GrabbableObject objToThrow = currentGrabbedObject;
-            Drop(); // Önce baðý kopar
+            Drop();
 
-            Vector3 force = (transform.forward + Vector3.up * 0.2f).normalized * throwForce;
-            RequestThrowServerRpc(objToThrow.NetworkObjectId, force);
+            // Kameranýn baktýðý yöne fýrlat
+            Vector3 throwDir = Camera.main.transform.forward;
+            RequestThrowServerRpc(objToThrow.NetworkObjectId, throwDir * throwForce);
         }
     }
 
@@ -97,7 +142,6 @@ public class PlayerGrab : NetworkBehaviour
         foreach (Collider col in targetColliders)
         {
             if (col == myCollider) continue;
-            // ignore = !enableCollision (True ise yoksay, False ise çarpýþ)
             Physics.IgnoreCollision(myCollider, col, !enableCollision);
         }
     }
@@ -143,42 +187,39 @@ public class PlayerGrab : NetworkBehaviour
 
         if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(targetObjectId, out NetworkObject networkObject))
         {
-            // DÜZELTME: Sadece GetComponent deðil, çocuklarý da tara!
             currentGrabbedObject = networkObject.GetComponent<GrabbableObject>();
             if (currentGrabbedObject == null) currentGrabbedObject = networkObject.GetComponentInChildren<GrabbableObject>();
+            if (currentGrabbedObject == null) return;
 
-            // Eðer hala bulamadýysa hata ver ve çýk (G tuþu sorununun kökü burasýydý)
-            if (currentGrabbedObject == null)
-            {
-                Debug.LogError("HATA: Grabbable scripti bulunamadý! Prefab yapýsýný kontrol et.");
-                return;
-            }
-
-            // Rigidbody bul
             Rigidbody targetRb = networkObject.GetComponent<Rigidbody>();
             if (targetRb == null) targetRb = networkObject.GetComponentInChildren<Rigidbody>();
 
-            // Çarpýþmayý kapat (Ýçime girmesin diye önlem 1)
+            // Çarpýþmayý kapat
             ToggleCollision(networkObject.gameObject, false);
 
-            // --- YAY AYARLARI (ÝÇÝME GÝRMESÝN DÝYE ÖNLEM 2) ---
+            // Eski fizik deðerlerini kaydet
+            initialObjectDrag = targetRb.drag;
+            initialObjectAngularDrag = targetRb.angularDrag;
+
+            // Tutarken objeyi aðýrlaþtýr (Tok dursun, sallanmasýn)
+            targetRb.drag = heldObjectDrag;
+            targetRb.angularDrag = heldObjectAngularDrag;
+
+            // --- GELÝÞMÝÞ SPRING JOINT ---
             currentJoint = gameObject.AddComponent<SpringJoint>();
             currentJoint.connectedBody = targetRb;
 
-            // Bu ayarlar nesneyi uzakta tutar:
             currentJoint.autoConfigureConnectedAnchor = false;
-            currentJoint.anchor = Vector3.up * 0.5f; // Omuz hizasýndan tut
+            // Anchor'ý scriptte sürekli güncelleyeceðiz, baþlangýçta sýfýr olsun
+            currentJoint.anchor = Vector3.zero;
             currentJoint.connectedAnchor = Vector3.zero;
 
-            currentJoint.spring = 100f;   // Çekme gücü
-            currentJoint.damper = 10f;    // Titremeyi önleme
-
-            // KRÝTÝK AYAR: Nesne en az 1.5 metre uzakta dursun!
-            currentJoint.minDistance = 1.5f;
-            currentJoint.maxDistance = 2.0f;
+            currentJoint.spring = holdSpring;
+            currentJoint.damper = holdDamper;
+            currentJoint.minDistance = 0;
+            currentJoint.maxDistance = 0; // Sýfýr olsun ki HoldPoint'e tam yapýþmaya çalýþsýn
 
             currentJoint.breakForce = Mathf.Infinity;
-            Debug.Log("BAÐLANTI TAMAM: " + currentGrabbedObject.name);
         }
     }
 }

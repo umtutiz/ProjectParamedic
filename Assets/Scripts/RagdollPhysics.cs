@@ -1,13 +1,14 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 public class RagdollPhysics : MonoBehaviour
 {
     void Start()
     {
-        // Bu objenin altýndaki tüm parçalarý bul
+        // 1. Bu sosis adamýn bütün parçalarýndaki Collider'larý bul
         Collider[] myColliders = GetComponentsInChildren<Collider>();
 
-        // Hepsinin birbiriyle çarpýþmasýný kapat (Sadece dýþ dünyaya çarpsýnlar)
+        // 2. Hepsini birbirine düþman et (Birbirlerini görmesinler)
         for (int i = 0; i < myColliders.Length; i++)
         {
             for (int j = i + 1; j < myColliders.Length; j++)

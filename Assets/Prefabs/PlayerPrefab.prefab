@@ -13,13 +13,13 @@ GameObject:
   - component: {fileID: 3899956159119415389}
   - component: {fileID: 1626964748618939604}
   - component: {fileID: 5925055473893578405}
-  - component: {fileID: 7493625808209216984}
   - component: {fileID: 2750827776345347305}
   - component: {fileID: 4332499248698763440}
   - component: {fileID: 8332950666257932438}
+  - component: {fileID: 4515234287345818164}
   m_Layer: 3
   m_Name: PlayerPrefab
-  m_TagString: Untagged
+  m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -37,7 +37,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 4506583255447793169}
+  - {fileID: 6014744877650145226}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!33 &8546699356001317700
@@ -136,20 +136,6 @@ MonoBehaviour:
   AutoObjectParentSync: 1
   SyncOwnerTransformWhenParented: 1
   AllowOwnerToParent: 0
---- !u!114 &7493625808209216984
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3241921242311942606}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1b6a9259f49438f40a36afc920752931, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  moveSpeed: 5
-  rotateSpeed: 10
 --- !u!114 &2750827776345347305
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -206,7 +192,7 @@ Rigidbody:
   m_UseGravity: 1
   m_IsKinematic: 0
   m_Interpolate: 0
-  m_Constraints: 80
+  m_Constraints: 112
   m_CollisionDetection: 0
 --- !u!114 &8332950666257932438
 MonoBehaviour:
@@ -220,13 +206,38 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7ef6caab60bca6541bd80503984d1241, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  handPosition: {fileID: 4506583255447793169}
+  holdPoint: {fileID: 4506583255447793169}
   grabRadius: 0.5
   grabDistance: 3
   throwForce: 10
   interactableLayer:
     serializedVersion: 2
     m_Bits: 64
+  holdSpring: 200
+  holdDamper: 10
+  heldObjectDrag: 10
+  heldObjectAngularDrag: 10
+--- !u!114 &4515234287345818164
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3241921242311942606}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 141145265430e7d4a83299234373af99, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  walkSpeed: 4
+  runSpeed: 8
+  jumpForce: 15
+  mouseSensitivity: 2
+  cameraRoot: {fileID: 6014744877650145226}
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 1
+  groundCheckDist: 1.2
 --- !u!1 &6803656658957697131
 GameObject:
   m_ObjectHideFlags: 0
@@ -237,7 +248,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4506583255447793169}
   m_Layer: 3
-  m_Name: HandPosition
+  m_Name: HoldPoint
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -252,9 +263,41 @@ Transform:
   m_GameObject: {fileID: 6803656658957697131}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0.8}
+  m_LocalPosition: {x: 0, y: -0.5, z: 1.3}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
+  m_Father: {fileID: 6014744877650145226}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &7107461553714560092
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6014744877650145226}
+  m_Layer: 3
+  m_Name: CameraRoot
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6014744877650145226
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7107461553714560092}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.75, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 4506583255447793169}
   m_Father: {fileID: 3339026564596098341}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}

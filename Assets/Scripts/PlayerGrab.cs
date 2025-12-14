@@ -222,4 +222,14 @@ public class PlayerGrab : NetworkBehaviour
             currentJoint.breakForce = Mathf.Infinity;
         }
     }
+
+    // Stretcher scripti tarafýndan çaðrýlýr
+    public void ForceDrop()
+    {
+        // Eðer elimde bir þey varsa Drop fonksiyonunu çalýþtýr
+        if (currentGrabbedObject != null)
+        {
+            Drop();
+        }
+    }
 }

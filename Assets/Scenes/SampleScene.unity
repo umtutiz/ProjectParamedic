@@ -247,18 +247,28 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4826793080752210508, guid: 8dca54e2dd86b694c870070a712df75e,
         type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 4826793080752210508, guid: 8dca54e2dd86b694c870070a712df75e,
+        type: 3}
+      propertyPath: m_LocalScale.z
+      value: 3.066
+      objectReference: {fileID: 0}
+    - target: {fileID: 4826793080752210508, guid: 8dca54e2dd86b694c870070a712df75e,
+        type: 3}
       propertyPath: m_LocalPosition.x
       value: 2.25
       objectReference: {fileID: 0}
     - target: {fileID: 4826793080752210508, guid: 8dca54e2dd86b694c870070a712df75e,
         type: 3}
       propertyPath: m_LocalPosition.y
-      value: 1.56
+      value: 1.06
       objectReference: {fileID: 0}
     - target: {fileID: 4826793080752210508, guid: 8dca54e2dd86b694c870070a712df75e,
         type: 3}
       propertyPath: m_LocalPosition.z
-      value: 3
+      value: 2.467
       objectReference: {fileID: 0}
     - target: {fileID: 4826793080752210508, guid: 8dca54e2dd86b694c870070a712df75e,
         type: 3}
@@ -295,6 +305,11 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 7000574879055512575, guid: 8dca54e2dd86b694c870070a712df75e,
+        type: 3}
+      propertyPath: patientHoldPoint
+      value: 
+      objectReference: {fileID: 926493223}
     - target: {fileID: 8806315698356664677, guid: 8dca54e2dd86b694c870070a712df75e,
         type: 3}
       propertyPath: GlobalObjectIdHash
@@ -307,7 +322,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: 4826793080752210508, guid: 8dca54e2dd86b694c870070a712df75e,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 926493223}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 8dca54e2dd86b694c870070a712df75e, type: 3}
 --- !u!1 &410087039
@@ -669,6 +688,12 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 576890306}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!4 &741004488 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 4826793080752210508, guid: 8dca54e2dd86b694c870070a712df75e,
+    type: 3}
+  m_PrefabInstance: {fileID: 260205557}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -732,6 +757,7 @@ GameObject:
   - component: {fileID: 856098128}
   - component: {fileID: 856098127}
   - component: {fileID: 856098126}
+  - component: {fileID: 856098129}
   m_Layer: 0
   m_Name: Ambulans_Arac
   m_TagString: Untagged
@@ -814,6 +840,7 @@ Transform:
   - {fileID: 576890307}
   - {fileID: 1151504392}
   - {fileID: 545726611}
+  - {fileID: 1882291424}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &856098126
@@ -831,7 +858,7 @@ MonoBehaviour:
   carController: {fileID: 856098127}
   driverViewPoint: {fileID: 1465817494}
   exitPoint: {fileID: 545726611}
-  interactionDist: 7
+  interactionDist: 5
   mouseSensitivity: 2
 --- !u!114 &856098127
 MonoBehaviour:
@@ -881,6 +908,51 @@ MonoBehaviour:
   InLocalSpace: 0
   Interpolate: 1
   SlerpPosition: 0
+--- !u!114 &856098129
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 856098122}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 33b0b6ee5acea7343bac5e4934cf97a9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  stretcherLockPos: {fileID: 1882291424}
+  interactionRadius: 3.5
+--- !u!1 &926493222
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 926493223}
+  m_Layer: 6
+  m_Name: HastaYatagi
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &926493223
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 926493222}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0.7071068, y: 0, z: 0, w: 0.7071068}
+  m_LocalPosition: {x: 0, y: 3.81, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 741004488}
+  m_LocalEulerAnglesHint: {x: -90, y: 0, z: 0}
 --- !u!1 &963224014
 GameObject:
   m_ObjectHideFlags: 0
@@ -2244,6 +2316,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 20, y: 0, z: 0}
+--- !u!1 &1882291423
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1882291424}
+  m_Layer: 0
+  m_Name: LockPos
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1882291424
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1882291423}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0.7071068, z: 0, w: 0.7071068}
+  m_LocalPosition: {x: -0.843777, y: 0.28467494, z: 0.502}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 856098125}
+  m_LocalEulerAnglesHint: {x: 0, y: 90, z: 0}
 --- !u!1 &1964602097
 GameObject:
   m_ObjectHideFlags: 0

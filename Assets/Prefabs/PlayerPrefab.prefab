@@ -15,8 +15,8 @@ GameObject:
   - component: {fileID: 5925055473893578405}
   - component: {fileID: 2750827776345347305}
   - component: {fileID: 4332499248698763440}
-  - component: {fileID: 8332950666257932438}
   - component: {fileID: 4515234287345818164}
+  - component: {fileID: 4628964709289214966}
   m_Layer: 3
   m_Name: PlayerPrefab
   m_TagString: Player
@@ -125,7 +125,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 3691159795
+  GlobalObjectIdHash: 1904218876
   InScenePlacedSourceGlobalObjectIdHash: 0
   AlwaysReplicateAsRoot: 0
   SynchronizeTransform: 1
@@ -194,29 +194,6 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 112
   m_CollisionDetection: 0
---- !u!114 &8332950666257932438
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3241921242311942606}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7ef6caab60bca6541bd80503984d1241, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  holdPoint: {fileID: 4506583255447793169}
-  grabRadius: 0.5
-  grabDistance: 3
-  throwForce: 10
-  interactableLayer:
-    serializedVersion: 2
-    m_Bits: 64
-  holdSpring: 200
-  holdDamper: 10
-  heldObjectDrag: 10
-  heldObjectAngularDrag: 10
 --- !u!114 &4515234287345818164
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -238,6 +215,29 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 1
   groundCheckDist: 1.2
+--- !u!114 &4628964709289214966
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3241921242311942606}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7ef6caab60bca6541bd80503984d1241, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  holdPoint: {fileID: 4506583255447793169}
+  grabRadius: 0.8
+  grabDistance: 5
+  throwForce: 15
+  interactableLayer:
+    serializedVersion: 2
+    m_Bits: 64
+  holdSpring: 500
+  holdDamper: 50
+  heldObjectDrag: 10
+  heldObjectAngularDrag: 10
 --- !u!1 &6803656658957697131
 GameObject:
   m_ObjectHideFlags: 0

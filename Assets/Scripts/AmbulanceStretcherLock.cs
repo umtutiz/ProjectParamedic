@@ -1,144 +1,51 @@
 using Unity.Netcode;
 using UnityEngine;
 
-public class AmbulanceStretcherSystem : NetworkBehaviour
+public class AmbulanceStretcherLock : NetworkBehaviour
 {
     [Header("Ayarlar")]
-    public Transform stretcherLockPos; // Ambulansýn içindeki "SedyeYeri"
-    public float interactionRadius = 3.5f; // Arkadan ne kadar uzaktan alabilsin?
+    // Inspector'da oluþturduðun o boþ 'PatientPoint' objesini buraya sürüklemeyi UNUTMA!
+    [SerializeField] private Transform patientPoint;
 
-    private Stretcher currentStretcher; // Ýçerdeki sedye
+    // Sedye dolu mu boþ mu kontrolü
+    // Inspector'da Is Full tikinin KALKIK (Boþ) olduðundan emin ol.
+    public NetworkVariable<bool> isFull = new NetworkVariable<bool>(false);
 
-    void Update()
+    // Baþlangýçta çalýþacak kod
+    public override void OnNetworkSpawn()
     {
-        // T TUÞU: Sedyeyi Ýçeri Al / Dýþarý At
-        if (Input.GetKeyDown(KeyCode.T))
-        {
-            if (currentStretcher != null)
-            {
-                RequestEjectStretcherServerRpc();
-            }
-            else
-            {
-                TryLoadStretcher();
-            }
-        }
-
-        // HARD LOCK: Sedyeyi ambulansa çivile (Ambulans giderken titremesin)
-        if (currentStretcher != null)
-        {
-            currentStretcher.transform.position = stretcherLockPos.position;
-            currentStretcher.transform.rotation = stretcherLockPos.rotation;
-        }
+        // Eðer gerekirse görsel güncelleme kodlarý buraya
+        // Þimdilik sadece logic çalýþýyor
     }
 
-    void TryLoadStretcher()
+    // Dýþarýdan gelen gerçek hastayý sedyeye monte eder
+    // PlayerGrab scripti burayý çaðýrýr
+    public void PlacePatientReal(NetworkObject patientNetObj)
     {
-        // Arkadaki alaný tara
-        Collider[] hits = Physics.OverlapSphere(stretcherLockPos.position, interactionRadius);
-        foreach (var hit in hits)
+        if (isFull.Value) return; // Zaten doluysa alma
+
+        // 1. Durumu dolu yap
+        isFull.Value = true;
+
+        // 2. Hastayý Netcode uyumlu þekilde sedyenin çocuðu yap (Parenting)
+        patientNetObj.TrySetParent(patientPoint);
+
+        // 3. Pozisyonu ve açýyý sýfýrla (Tam noktaya otursun)
+        patientNetObj.transform.localPosition = Vector3.zero;
+        patientNetObj.transform.localRotation = Quaternion.identity;
+
+        // 4. Hastanýn fiziðini kapat (Kýpýrdamasýn, donuk kalsýn)
+        Rigidbody rb = patientNetObj.GetComponent<Rigidbody>();
+        if (rb != null)
         {
-            // Stretcher scripti olan bir obje var mý?
-            Stretcher stretcher = hit.GetComponentInParent<Stretcher>();
-            if (stretcher == null) stretcher = hit.GetComponent<Stretcher>();
-
-            if (stretcher != null)
-            {
-                // 1. Oyuncunun elindeyse býraktýr
-                GrabbableObject grabbable = stretcher.GetComponent<GrabbableObject>();
-                if (grabbable != null) ForcePlayerToDrop(grabbable);
-
-                // 2. Ýçeri al
-                RequestLoadStretcherServerRpc(stretcher.NetworkObjectId);
-                return;
-            }
+            rb.isKinematic = true; // Fiziði kapat
+            rb.detectCollisions = false; // Çarpýþmayý kapat
         }
-    }
 
-    void ForcePlayerToDrop(GrabbableObject targetItem)
-    {
-        if (NetworkManager.Singleton.LocalClient != null &&
-            NetworkManager.Singleton.LocalClient.PlayerObject != null)
+        // Puan ver
+        if (GameManager.Instance != null)
         {
-            var playerGrab = NetworkManager.Singleton.LocalClient.PlayerObject.GetComponent<PlayerGrab>();
-            if (playerGrab != null) playerGrab.ForceDrop();
-        }
-    }
-
-    // --- SERVER ---
-
-    [ServerRpc(RequireOwnership = false)]
-    void RequestLoadStretcherServerRpc(ulong stretcherId)
-    {
-        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(stretcherId, out NetworkObject netObj))
-        {
-            netObj.RemoveOwnership(); // Ambulansýn malý oldu artýk
-            netObj.TrySetParent(stretcherLockPos); // Ambulansýn çocuðu yap
-
-            LoadStretcherClientRpc(stretcherId);
-        }
-    }
-
-    [ServerRpc(RequireOwnership = false)]
-    void RequestEjectStretcherServerRpc()
-    {
-        if (currentStretcher == null) return;
-
-        NetworkObject netObj = currentStretcher.GetComponent<NetworkObject>();
-        netObj.TryRemoveParent(); // Özgür býrak
-
-        EjectStretcherClientRpc(netObj.NetworkObjectId);
-    }
-
-    // --- CLIENT ---
-
-    [ClientRpc]
-    void LoadStretcherClientRpc(ulong stretcherId)
-    {
-        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(stretcherId, out NetworkObject netObj))
-        {
-            currentStretcher = netObj.GetComponent<Stretcher>();
-
-            // Fiziði Kapat (Ambulansýn içinde çarpýþmasýn)
-            Rigidbody rb = currentStretcher.GetComponent<Rigidbody>();
-            if (rb)
-            {
-                rb.isKinematic = true;
-                rb.velocity = Vector3.zero;
-            }
-
-            // Collider'larý kapatmaya gerek yok, zeminle çarpýþmasý bazen iyidir ama 
-            // sorun çýkarýrsa buraya collider kapatma kodu da ekleriz.
-
-            // Konumla
-            currentStretcher.transform.position = stretcherLockPos.position;
-            currentStretcher.transform.rotation = stretcherLockPos.rotation;
-        }
-    }
-
-    [ClientRpc]
-    void EjectStretcherClientRpc(ulong stretcherId)
-    {
-        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(stretcherId, out NetworkObject netObj))
-        {
-            // Fiziði Aç
-            Rigidbody rb = netObj.GetComponent<Rigidbody>();
-            if (rb) rb.isKinematic = false;
-
-            // Arkaya doðru hafif fýrlat (Dýþarý çýksýn)
-            if (rb) rb.AddForce(-transform.forward * 2f, ForceMode.Impulse);
-
-            currentStretcher = null;
-        }
-    }
-
-    // Editörde alaný görelim
-    void OnDrawGizmos()
-    {
-        if (stretcherLockPos != null)
-        {
-            Gizmos.color = Color.blue;
-            Gizmos.DrawWireSphere(stretcherLockPos.position, interactionRadius);
+            GameManager.Instance.AddScore(500);
         }
     }
 }

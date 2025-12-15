@@ -4,20 +4,21 @@ using UnityEngine;
 public class PlayerGrab : NetworkBehaviour
 {
     [Header("Ayarlar")]
-    public Transform holdPoint; // KAMERANIN ALTINDAKÝ NOKTA (Bunu atamayý unutma!)
+    public Transform holdPoint;
     public float grabRadius = 0.8f;
     public float grabDistance = 5f;
-    public float throwForce = 20f;
+    public float throwForce = 15f;
     public LayerMask interactableLayer;
 
-    [Header("Fizik Ayarlarý")]
-    public float holdSpring = 200f;  // Yayýn gücü (Daha sýký tutuþ)
-    public float holdDamper = 10f;   // Titremeyi önleme
-    public float heldObjectDrag = 10f; // Tutarken eþya aðýrlaþsýn (Sallanmasýn)
-    public float heldObjectAngularDrag = 10f; // Dönmesi yavaþlasýn
+    [Header("Fizik")]
+    public float holdSpring = 500f;
+    public float holdDamper = 50f;
+    public float heldObjectDrag = 10f;
+    public float heldObjectAngularDrag = 10f;
 
     private SpringJoint currentJoint;
     private GrabbableObject currentGrabbedObject;
+    private int originalLayer;
     private Collider myCollider;
     private float initialObjectDrag;
     private float initialObjectAngularDrag;
@@ -31,61 +32,52 @@ public class PlayerGrab : NetworkBehaviour
     {
         if (!IsOwner) return;
 
-        // DEBUG: HoldPoint'i gör
-       // if (holdPoint != null)
-            Debug.DrawLine(Camera.main.transform.position, holdPoint.position, Color.cyan);
-
-        // E TUÞU: Tut
-        if (Input.GetKeyDown(KeyCode.E))
+        // E TUÞU: Sadece YERDEN ALMAK için
+        if (Input.GetKeyDown(KeyCode.E) && currentGrabbedObject == null)
         {
-            if (currentGrabbedObject == null) TryGrab();
+            TryGrab();
         }
 
-        // G TUÞU: Býrak
-        if (Input.GetKeyDown(KeyCode.G))
+        // DÝKKAT: R TUÞUNU BURADAN SÝLDÝK. 
+        // ÇÜNKÜ ARTIK STRETCHER SCRIPTI KENDÝSÝ R'YE BASINCA ALIYOR.
+
+        // G TUÞU: YERE BIRAK
+        if (Input.GetKeyDown(KeyCode.G) && currentGrabbedObject != null)
         {
-            if (currentGrabbedObject != null) Drop();
+            Drop();
         }
 
-        // SOL TIK: Fýrlat
+        // SOL TIK: FIRLAT
         if (Input.GetMouseButtonDown(0) && currentGrabbedObject != null)
         {
             Throw();
         }
 
-        // MOUSE TEKERLEÐÝ: Eþyayý Ýleri/Geri Al
+        // MOUSE TEKERLEÐÝ: MESAFE
         if (currentGrabbedObject != null)
         {
             float scroll = Input.GetAxis("Mouse ScrollWheel");
             if (scroll != 0)
             {
-                // HoldPoint'in Z pozisyonunu deðiþtir (Min 1.5m, Max 4m)
                 Vector3 localPos = holdPoint.localPosition;
-                localPos.z += scroll * 2f;
-                localPos.z = Mathf.Clamp(localPos.z, 1.5f, 4f);
+                localPos.z = Mathf.Clamp(localPos.z + scroll * 2f, 1.5f, 4f);
                 holdPoint.localPosition = localPos;
             }
         }
     }
 
-    // FÝZÝK GÜNCELLEMESÝ (HAVAYA KALDIRMA BURADA OLUYOR)
     void FixedUpdate()
     {
         if (!IsOwner || currentJoint == null || holdPoint == null) return;
-
-        // Yayýn oyuncudaki ucunu (Anchor) HoldPoint'in olduðu yere taþý
-        // InverseTransformPoint: Dünya pozisyonunu, oyuncunun local pozisyonuna çevirir
         currentJoint.anchor = transform.InverseTransformPoint(holdPoint.position);
     }
 
     void TryGrab()
     {
         if (Camera.main == null) return;
-
         Transform camTransform = Camera.main.transform;
         RaycastHit hit;
 
-        // SphereCast ile ara
         if (Physics.SphereCast(camTransform.position, grabRadius, camTransform.forward, out hit, grabDistance, interactableLayer))
         {
             GrabbableObject grabbable = hit.transform.GetComponentInParent<GrabbableObject>();
@@ -104,7 +96,6 @@ public class PlayerGrab : NetworkBehaviour
 
         if (currentGrabbedObject != null)
         {
-            // Eski fizik deðerlerini geri yükle (Kayganlýðý geri gelsin)
             Rigidbody rb = currentGrabbedObject.GetComponent<Rigidbody>();
             if (rb == null) rb = currentGrabbedObject.GetComponentInChildren<Rigidbody>();
 
@@ -114,6 +105,7 @@ public class PlayerGrab : NetworkBehaviour
                 rb.angularDrag = initialObjectAngularDrag;
             }
 
+            SetLayerRecursively(currentGrabbedObject.gameObject, originalLayer);
             ToggleCollision(currentGrabbedObject.gameObject, true);
             RequestDropServerRpc(currentGrabbedObject.NetworkObjectId);
             currentGrabbedObject = null;
@@ -126,19 +118,33 @@ public class PlayerGrab : NetworkBehaviour
         {
             GrabbableObject objToThrow = currentGrabbedObject;
             Drop();
-
-            // Kameranýn baktýðý yöne fýrlat
             Vector3 throwDir = Camera.main.transform.forward;
             RequestThrowServerRpc(objToThrow.NetworkObjectId, throwDir * throwForce);
+        }
+    }
+
+    // STRETCHER BU FONKSÝYONU ÇAÐIRACAK (ZORLA BIRAKTIRMA)
+    public void ForceDrop()
+    {
+        if (currentGrabbedObject != null)
+        {
+            Drop();
+        }
+    }
+
+    void SetLayerRecursively(GameObject obj, int newLayer)
+    {
+        obj.layer = newLayer;
+        foreach (Transform child in obj.transform)
+        {
+            SetLayerRecursively(child.gameObject, newLayer);
         }
     }
 
     void ToggleCollision(GameObject targetObj, bool enableCollision)
     {
         if (myCollider == null) return;
-        Transform rootObj = targetObj.transform.root;
-        Collider[] targetColliders = rootObj.GetComponentsInChildren<Collider>();
-
+        Collider[] targetColliders = targetObj.GetComponentsInChildren<Collider>();
         foreach (Collider col in targetColliders)
         {
             if (col == myCollider) continue;
@@ -146,7 +152,7 @@ public class PlayerGrab : NetworkBehaviour
         }
     }
 
-    // --- RPC ---
+    // --- RPC KISMI ---
 
     [ServerRpc]
     void RequestGrabServerRpc(ulong targetObjectId)
@@ -194,42 +200,28 @@ public class PlayerGrab : NetworkBehaviour
             Rigidbody targetRb = networkObject.GetComponent<Rigidbody>();
             if (targetRb == null) targetRb = networkObject.GetComponentInChildren<Rigidbody>();
 
-            // Çarpýþmayý kapat
             ToggleCollision(networkObject.gameObject, false);
 
-            // Eski fizik deðerlerini kaydet
             initialObjectDrag = targetRb.drag;
             initialObjectAngularDrag = targetRb.angularDrag;
 
-            // Tutarken objeyi aðýrlaþtýr (Tok dursun, sallanmasýn)
+            // Layer'ý 2 (Ignore Raycast) yap
+            originalLayer = networkObject.gameObject.layer;
+            SetLayerRecursively(networkObject.gameObject, 2);
+
             targetRb.drag = heldObjectDrag;
             targetRb.angularDrag = heldObjectAngularDrag;
 
-            // --- GELÝÞMÝÞ SPRING JOINT ---
             currentJoint = gameObject.AddComponent<SpringJoint>();
             currentJoint.connectedBody = targetRb;
-
             currentJoint.autoConfigureConnectedAnchor = false;
-            // Anchor'ý scriptte sürekli güncelleyeceðiz, baþlangýçta sýfýr olsun
             currentJoint.anchor = Vector3.zero;
             currentJoint.connectedAnchor = Vector3.zero;
-
             currentJoint.spring = holdSpring;
             currentJoint.damper = holdDamper;
             currentJoint.minDistance = 0;
-            currentJoint.maxDistance = 0; // Sýfýr olsun ki HoldPoint'e tam yapýþmaya çalýþsýn
-
+            currentJoint.maxDistance = 0;
             currentJoint.breakForce = Mathf.Infinity;
-        }
-    }
-
-    // Stretcher scripti tarafýndan çaðrýlýr
-    public void ForceDrop()
-    {
-        // Eðer elimde bir þey varsa Drop fonksiyonunu çalýþtýr
-        if (currentGrabbedObject != null)
-        {
-            Drop();
         }
     }
 }

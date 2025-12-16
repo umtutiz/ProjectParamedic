@@ -16,6 +16,7 @@ GameObject:
   - component: {fileID: 606232156894837308}
   - component: {fileID: -4916338915439770142}
   - component: {fileID: -2394120327792931675}
+  - component: {fileID: 2913353686226039771}
   m_Layer: 0
   m_Name: Sedye
   m_TagString: Untagged
@@ -144,9 +145,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7fe87973ad64ee54db3308181a046a6b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  patientVisual: {fileID: 0}
-  isFull:
-    m_InternalValue: 1
+  patientHoldPoint: {fileID: 0}
+  lockRadius: 3
 --- !u!54 &-4916338915439770142
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -205,3 +205,15 @@ MonoBehaviour:
   InLocalSpace: 0
   Interpolate: 1
   SlerpPosition: 0
+--- !u!114 &2913353686226039771
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4829826444019478566}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 754c6e44df2dfd7418930c0537ac23bf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

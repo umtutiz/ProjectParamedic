@@ -1,50 +1,39 @@
-using Unity.Netcode;
 using UnityEngine;
-using TMPro; // TextMeshPro için gerekli
+using TMPro; // TextMeshPro kullanýyorsan bunu aç, normal Text ise 'using UnityEngine.UI;' kullan
+// Eðer hata verirse yukarýdaki TMPro satýrýný sil, 'using UnityEngine.UI;' ekle.
 
-public class GameManager : NetworkBehaviour
+public class GameManager : MonoBehaviour
 {
-    // Singleton yapýsý: Her yerden GameManager.Instance diye ulaþabilmek için
     public static GameManager Instance;
 
-    [Header("UI Settings")]
-    [SerializeField] private TextMeshProUGUI scoreText; // Inspector'dan ScoreText'i buraya sürükle
-
-    // Skoru að üzerinde senkronize tutan deðiþken
-    // Sadece sunucu yazabilir (NetworkVariableWritePermission.Server)
-    private NetworkVariable<int> totalScore = new NetworkVariable<int>(0);
+    [Header("UI Ayarlarý")]
+    public TextMeshProUGUI moneyText; // Normal Text kullanýyorsan burayý 'Text' yap
+    public int currentMoney = 0;
 
     private void Awake()
     {
-        // Singleton atamasý
+        // Singleton (Sahneler arasý geçiþte yok olmasýn istiyorsan DontDestroyOnLoad ekle, ama þimdilik gerek yok)
         if (Instance == null) Instance = this;
         else Destroy(gameObject);
     }
 
-    public override void OnNetworkSpawn()
+    private void Start()
     {
-        // Skor deðiþtiðinde (herhangi bir oyuncu sayý yaparsa) UI'ý güncelle
-        totalScore.OnValueChanged += (oldVal, newVal) =>
-        {
-            UpdateScoreUI(newVal);
-        };
-
-        // Oyun baþladýðýnda mevcut skoru yazdýr
-        UpdateScoreUI(totalScore.Value);
+        UpdateUI();
     }
 
-    // Sedyeden çaðýracaðýmýz fonksiyon bu
     public void AddScore(int amount)
     {
-        // Sadece sunucu skoru deðiþtirebilir
-        if (!IsServer) return;
-
-        totalScore.Value += amount;
+        currentMoney += amount;
+        UpdateUI();
     }
 
-    private void UpdateScoreUI(int currentScore)
+    void UpdateUI()
     {
-        // Bu kod her oyuncunun kendi ekranýnda çalýþýr
-        scoreText.text = "Para: " + currentScore.ToString() + "$";
+        if (moneyText != null)
+        {
+            // Ýþte burasý. Ýstediðin gibi MONEY yazýyor.
+            moneyText.text = "MONEY: $" + currentMoney.ToString();
+        }
     }
 }

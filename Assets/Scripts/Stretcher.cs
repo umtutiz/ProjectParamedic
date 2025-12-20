@@ -9,6 +9,7 @@ public class Stretcher : NetworkBehaviour
     public float lockRadius = 3.0f;
 
     private GrabbableObject lockedPatient;
+    public NetworkVariable<bool> isFull = new NetworkVariable<bool>(false);
 
     void LateUpdate()
     {

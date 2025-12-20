@@ -6,6 +6,7 @@ TagManager:
   tags:
   - Grabbable
   - Car
+  - Patient
   layers:
   - Default
   - TransparentFX

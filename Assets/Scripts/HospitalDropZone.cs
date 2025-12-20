@@ -3,48 +3,65 @@ using UnityEngine;
 
 public class HospitalDropZone : NetworkBehaviour
 {
+    [Header("AYARLAR")]
+    public int rewardAmount = 1000; // Hasta baþý kaç para?
+    public string patientTag = "Patient"; // Hastanýn Tag'i ne?
+
     private void OnTriggerEnter(Collider other)
     {
-        if (!IsServer) return; // Sadece sunucu karar verir
+        // Sadece Server karar verir (Hile olmasýn diye)
+        if (!IsServer) return;
 
-        // Ýçeri giren þey bir Sedye mi?
-        // (Sedyenin içindeki colliderlar da girebilir, o yüzden InParent bakýyoruz)
-        Stretcher stretcher = other.GetComponentInParent<Stretcher>();
-        if (stretcher == null) stretcher = other.GetComponent<Stretcher>();
+        // Giren þeyin köküne bak (Çünkü collider kolda bacakta olabilir)
+        Transform rootObj = other.transform.root;
 
-        if (stretcher != null)
+        // 1. Giren þey bir "Hasta" mý? (Tag kontrolü)
+        if (rootObj.CompareTag(patientTag))
         {
-            CheckAndRescuePatient(stretcher);
+            // Network objesini al
+            if (rootObj.TryGetComponent(out NetworkObject patientNetObj))
+            {
+                // Hastayý oyundan sil (Despawn)
+                patientNetObj.Despawn();
+
+                // Parayý ver
+                AddReward();
+            }
+        }
+        // 2. Veya giren þey "Sedye" mi? (Sedye içindeki hastayý bulalým)
+        else if (rootObj.GetComponent<Stretcher>() != null) // Sedyede bu script var diye referans aldým
+        {
+            // Sedyenin çocuklarýný tara, hasta var mý?
+            foreach (Transform child in rootObj)
+            {
+                if (child.CompareTag(patientTag))
+                {
+                    if (child.TryGetComponent(out NetworkObject childNetObj))
+                    {
+                        childNetObj.Despawn(); // Sadece hastayý sil, sedye kalsýn
+                        AddReward();
+
+                        // Sedyenin "Dolu" deðiþkenini boþalt
+                        var stretcher = rootObj.GetComponent<Stretcher>();
+                        if (stretcher != null) stretcher.isFull.Value = false;
+
+                        break; // Bir hasta yetti
+                    }
+                }
+            }
         }
     }
 
-    void CheckAndRescuePatient(Stretcher stretcher)
+    void AddReward()
     {
-        // Sedyenin "lockedPatient" deðiþkenine ulaþmamýz lazým.
-        // Ama private olduðu için Stretcher scriptine minik bir ekleme yapacaðýz.
-        // Þimdilik çocuklarýna bakarak bulalým (Daha garanti).
-
-        // Sedyenin altýndaki GrabbableObject'i bul (Bu hastadýr)
-        GrabbableObject patient = stretcher.GetComponentInChildren<GrabbableObject>();
-
-        if (patient != null)
+        // GameManager varsa parayý ekle
+        if (GameManager.Instance != null)
         {
-            // HASTA VAR! KURTARMA BAÞLASIN.
-
-            // 1. Puan Ver
-            if (GameManager.Instance != null)
-            {
-                GameManager.Instance.AddScore(100);
-            }
-
-            // 2. Hastayý Yok Et (Despawn)
-            NetworkObject patientNetObj = patient.GetComponent<NetworkObject>();
-            if (patientNetObj != null)
-            {
-                patientNetObj.Despawn(true); // True = Destroy
-            }
-
-            Debug.Log("HASTA KURTARILDI! +100 PUAN");
+            GameManager.Instance.AddMoney(rewardAmount);
+        }
+        else
+        {
+            Debug.LogError("Kanka sahneye GameManager koymayý unuttun!");
         }
     }
 }

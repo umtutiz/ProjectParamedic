@@ -17,7 +17,7 @@ public class PlayerGrab : NetworkBehaviour
     public float heldObjectAngularDrag = 10f;
 
     private SpringJoint currentJoint;
-    private GrabbableObject currentGrabbedObject;
+    public GrabbableObject currentGrabbedObject; // <-- PUBLIC YAPTIK KÝ UI GÖRSÜN
     private int originalLayer;
     private Collider myCollider;
     private float initialObjectDrag;

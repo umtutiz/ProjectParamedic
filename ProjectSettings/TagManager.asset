@@ -7,6 +7,8 @@ TagManager:
   - Grabbable
   - Car
   - Patient
+  - Ambulance
+  - Stretcher
   layers:
   - Default
   - TransparentFX

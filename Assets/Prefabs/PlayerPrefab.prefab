@@ -17,6 +17,7 @@ GameObject:
   - component: {fileID: 4332499248698763440}
   - component: {fileID: 4515234287345818164}
   - component: {fileID: 4628964709289214966}
+  - component: {fileID: 4650354418435304119}
   m_Layer: 3
   m_Name: PlayerPrefab
   m_TagString: Player
@@ -125,7 +126,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 1904218876
+  GlobalObjectIdHash: 3691159795
   InScenePlacedSourceGlobalObjectIdHash: 0
   AlwaysReplicateAsRoot: 0
   SynchronizeTransform: 1
@@ -238,6 +239,22 @@ MonoBehaviour:
   holdDamper: 50
   heldObjectDrag: 10
   heldObjectAngularDrag: 10
+--- !u!114 &4650354418435304119
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3241921242311942606}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dd83c51808b68064fa8458e3fbeb14a5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  reachDistance: 3
+  interactableLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!1 &6803656658957697131
 GameObject:
   m_ObjectHideFlags: 0

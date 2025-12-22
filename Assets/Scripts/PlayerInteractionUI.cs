@@ -9,7 +9,7 @@ public class PlayerInteractionUI : NetworkBehaviour
     public LayerMask interactableLayers;
 
     private Camera playerCam;
-    private PlayerGrab playerGrab; // <-- Senin taþýma scriptin
+    private PlayerGrab playerGrab;
 
     public override void OnNetworkSpawn()
     {
@@ -19,8 +19,6 @@ public class PlayerInteractionUI : NetworkBehaviour
             return;
         }
         playerCam = GetComponentInChildren<Camera>();
-
-        // PlayerGrab scriptini otomatik buluyoruz
         playerGrab = GetComponent<PlayerGrab>();
     }
 
@@ -39,16 +37,22 @@ public class PlayerInteractionUI : NetworkBehaviour
 
         TextMeshProUGUI txt = GameUIManager.Instance.interactionText;
 
-        // ELÝMÝZ DOLU MU?
-        // (Adým 1'de public yaptýðýn deðiþkeni okuyoruz)
+        // 1. ELÝMÝZ DOLU MU KONTROLÜ
         bool isHandFull = (playerGrab != null && playerGrab.currentGrabbedObject != null);
 
-        // ELÝMÝZDEKÝ ÞEY "HASTA" MI?
+        // 2. ELÝMÝZDEKÝ ÞEY "HASTA" MI KONTROLÜ
         bool holdingPatient = false;
+
         if (isHandFull)
         {
-            // Elimizdeki objenin tag'i Patient mi diye bakýyoruz
-            if (playerGrab.currentGrabbedObject.CompareTag("Patient"))
+            // Debug: Elimizde ne olduðunu görelim
+            // (Konsolda kýrmýzý hata çýkarsa PlayerGrab'de currentGrabbedObject PUBLIC yapýlmamýþ demektir)
+            // Debug.Log("Elimdeki: " + playerGrab.currentGrabbedObject.name + " | Tag: " + playerGrab.currentGrabbedObject.tag);
+
+            // Hem objenin kendisine, hem de en tepedeki babasýna (Root) bakýyoruz.
+            // Bazen script içerideki kemikte olur, ama Tag en dýþtaki kutudadýr.
+            if (playerGrab.currentGrabbedObject.CompareTag("Patient") ||
+                playerGrab.currentGrabbedObject.transform.root.CompareTag("Patient"))
             {
                 holdingPatient = true;
             }
@@ -59,49 +63,47 @@ public class PlayerInteractionUI : NetworkBehaviour
             Transform targetRoot = hit.transform.root;
             Transform hitObj = hit.transform;
 
-            // 1. SEDYE (STRETCHER)
+            // --- SEDYEYE BAKIYORSAK ---
             if (targetRoot.CompareTag("Stretcher") || hitObj.CompareTag("Stretcher") || targetRoot.GetComponent<Stretcher>() != null)
             {
                 if (holdingPatient)
                 {
-                    // Elimde hasta var + Sedyeye bakýyorum -> YERLEÞTÝR
-                    txt.text = "[R] Place Patient";
+                    txt.text = "[R] Place Patient"; // Hasta var -> Koy
+                    txt.color = Color.green; // Yazý yeþil olsun belli olsun
                 }
                 else if (!isHandFull)
                 {
-                    // Elim boþ + Sedyeye bakýyorum -> SÜRÜKLE
-                    txt.text = "[E] Drag Stretcher";
+                    txt.text = "[E] Drag Stretcher"; // El boþ -> Sürükle
+                    txt.color = Color.white;
                 }
                 else
                 {
-                    // Elimde baþka bir þey var (Kutu vs), yazý çýkmasýn
+                    // Elim dolu ama HASTA DEÐÝL (Kutu vs.), o zaman yazý çýkmasýn
                     txt.gameObject.SetActive(false);
                     return;
                 }
                 txt.gameObject.SetActive(true);
             }
-            // 2. HASTA (PATIENT)
+            // --- HASTAYA BAKIYORSAK ---
             else if (targetRoot.CompareTag("Patient") || hitObj.CompareTag("Patient"))
             {
                 if (!isHandFull)
                 {
-                    // Elim boþ + Hastaya bakýyorum -> TAÞI
                     txt.text = "Press [E] to Carry Patient";
+                    txt.color = Color.white;
                     txt.gameObject.SetActive(true);
                 }
                 else
                 {
-                    // Elim zaten dolu, yazý çýkmasýn
                     txt.gameObject.SetActive(false);
                 }
             }
-            // 3. AMBULANS
+            // --- AMBULANSA BAKIYORSAK ---
             else if (targetRoot.CompareTag("Ambulance") || hitObj.CompareTag("Ambulance"))
             {
                 txt.text = "Ambulans";
                 txt.gameObject.SetActive(true);
             }
-            // Hiçbiri deðilse
             else
             {
                 if (txt.gameObject.activeSelf) txt.gameObject.SetActive(false);

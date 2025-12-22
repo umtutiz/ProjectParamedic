@@ -103,6 +103,12 @@ public class PlayerGrab : NetworkBehaviour
             {
                 rb.drag = initialObjectDrag;
                 rb.angularDrag = initialObjectAngularDrag;
+
+                // --- YENÝ EKLENEN KISIM: FIRLATIRKEN FÝZÝÐÝ KALÝTELÝ YAP ---
+                // Yerin içine girmeyi önleyen ayar budur
+                rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+                rb.interpolation = RigidbodyInterpolation.Interpolate;
+                rb.velocity = Vector3.ClampMagnitude(rb.velocity, 20f); // Çok aþýrý hýzlanmayý engelle
             }
 
             SetLayerRecursively(currentGrabbedObject.gameObject, originalLayer);
@@ -205,7 +211,11 @@ public class PlayerGrab : NetworkBehaviour
             initialObjectDrag = targetRb.drag;
             initialObjectAngularDrag = targetRb.angularDrag;
 
-            // Layer'ý 2 (Ignore Raycast) yap
+            // --- YENÝ EKLENEN KISIM: ELDEYKEN FÝZÝÐÝ HAFÝFLET ---
+            // Elde taþýrken Continuous olursa titreme yapar, o yüzden Discrete yapýyoruz
+            targetRb.collisionDetectionMode = CollisionDetectionMode.Discrete;
+            targetRb.interpolation = RigidbodyInterpolation.None;
+
             originalLayer = networkObject.gameObject.layer;
             SetLayerRecursively(networkObject.gameObject, 2);
 

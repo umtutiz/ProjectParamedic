@@ -1,17 +1,22 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI; // Bunu eklemeyi unutma!
 
 public class GameUIManager : MonoBehaviour
 {
-    // Her yerden eriþilsin diye "static" yapýyoruz
     public static GameUIManager Instance;
 
-    [Header("UI ELEMENTLERÝ")]
-    public TextMeshProUGUI interactionText; // O lanet yazýyý buraya koyacaðýz
+    [Header("ETKÝLEÞÝM UI")]
+    public TextMeshProUGUI interactionText;
+
+    // --- YENÝ EKLENEN KISIM ---
+    [Header("STAMINA UI")]
+    public CanvasGroup staminaCanvasGroup; // Görünmezlik kutusu
+    public Image staminaBarFill;           // Yeþil dolan bar
+    // ---------------------------
 
     private void Awake()
     {
-        // Oyun açýlýnca "Ben buradayým" diyor
         if (Instance == null)
         {
             Instance = this;
@@ -21,10 +26,9 @@ public class GameUIManager : MonoBehaviour
             Destroy(gameObject);
         }
 
-        // Baþlangýçta o yazýyý kapatalým ki ekranda durmasýn
-        if (interactionText != null)
-        {
-            interactionText.gameObject.SetActive(false);
-        }
+        if (interactionText != null) interactionText.gameObject.SetActive(false);
+
+        // Stamina barý baþlangýçta gizle
+        if (staminaCanvasGroup != null) staminaCanvasGroup.alpha = 0;
     }
 }

@@ -1,105 +1,165 @@
 using System.Collections;
-using TMPro; // TextMeshPro için þart
+using TMPro;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class GameManager : NetworkBehaviour
 {
     public static GameManager Instance;
 
-    [Header("UI BAÐLANTILARI")]
-    public TextMeshProUGUI scoreText; // Sað üstteki skor
-    public TextMeshProUGUI popUpText; // Ortada çýkacak +1000 yazýsý
-
     [Header("AYARLAR")]
-    public float countSpeed = 1.0f; // Sayý sayma hýzý
+    public float gameDuration = 180f; // 3 Dakika
 
-    private int currentScore = 0; // Þu anki paramýz
-    private int displayedScore = 0; // Ekranda görünen sayý (Animasyon için)
+    [Header("UI BAÐLANTILARI")]
+    public TextMeshProUGUI timerText;
+    public TextMeshProUGUI moneyText;
+    public GameObject gameOverPanel;
+    public TextMeshProUGUI finalScoreText;
+
+    // NETCODE DEÐÝÞKENLERÝ
+    private NetworkVariable<float> netTimeLeft = new NetworkVariable<float>(180f);
+
+    // Bu sadece O ANKÝ maçýn parasý
+    private NetworkVariable<int> currentMatchMoney = new NetworkVariable<int>(0);
+
+    // TOPLAM ANA PARA (Bunu kayýttan çekeceðiz)
+    private int localTotalBank = 0;
+
+    private bool isGameActive = true;
 
     private void Awake()
     {
-        // Singleton (Her yerden eriþebilmek için)
         if (Instance == null) Instance = this;
         else Destroy(gameObject);
     }
 
-    // --- SUNUCU KISMI: Parayý Verir ve Emreder ---
+    public override void OnNetworkSpawn()
+    {
+        // 1. OYUN BAÞLARKEN ESKÝ PARAYI YÜKLE (LOAD)
+        LoadMoney();
+
+        if (IsServer)
+        {
+            netTimeLeft.Value = gameDuration;
+            currentMatchMoney.Value = 0;
+        }
+
+        if (gameOverPanel != null) gameOverPanel.SetActive(false);
+
+        // Ekrana baþlangýçta toplam paramýzý yazalým
+        UpdateMoneyUI();
+    }
+
+    private void Update()
+    {
+        // UI GÜNCELLEME
+        UpdateTimerUI();
+
+        // Para yazýsýnda: "Maç Parasý (Toplam Banka)" þeklinde gösterebiliriz
+        // Veya sadece maç parasýný gösteririz, tercih senin.
+        if (moneyText != null)
+        {
+            // Örnek: 150 $ (Maçtaki kazanç)
+            moneyText.text = currentMatchMoney.Value.ToString() + " $";
+        }
+
+        // SÜRE SAYIMI (Sadece Server)
+        if (IsServer && isGameActive)
+        {
+            netTimeLeft.Value -= Time.deltaTime;
+
+            if (netTimeLeft.Value <= 0)
+            {
+                netTimeLeft.Value = 0;
+                EndGame();
+            }
+        }
+    }
+
+    void UpdateTimerUI()
+    {
+        if (timerText == null) return;
+        float t = netTimeLeft.Value;
+        string minutes = Mathf.Floor(t / 60).ToString("00");
+        string seconds = (t % 60).ToString("00");
+        timerText.text = $"{minutes}:{seconds}";
+
+        if (t <= 10) timerText.color = Color.red;
+        else timerText.color = Color.white;
+    }
+
+    // --- PARA EKLEME ---
     public void AddMoney(int amount)
     {
         if (!IsServer) return;
-
-        // Parayý ekle
-        currentScore += amount;
-
-        // Tüm oyunculara (Clientlara) haber ver: "Animasyonu baþlatýn!"
-        UpdateScoreClientRpc(currentScore, amount);
+        currentMatchMoney.Value += amount;
     }
 
-    // --- OYUNCU KISMI: Animasyonu Oynatýr ---
+    // --- OYUN BÝTÝÞÝ ---
+    void EndGame()
+    {
+        isGameActive = false;
+        // Server herkese "Oyun bitti, þu kadar kazandýnýz" der
+        EndGameClientRpc(currentMatchMoney.Value);
+    }
+
     [ClientRpc]
-    void UpdateScoreClientRpc(int newTotalScore, int addedAmount)
+    void EndGameClientRpc(int matchEarnings)
     {
-        // 1. Hedef skoru güncelle
-        currentScore = newTotalScore;
+        // 1. MAÇ PARASINI KUMBARAYA EKLE VE KAYDET (AUTO SAVE)
+        localTotalBank += matchEarnings;
+        SaveMoney(); // <--- ÝÞTE KAYIT BURADA YAPILIYOR
 
-        // 2. Sayarak Artma Animasyonunu Baþlat
-        StopAllCoroutines(); // Eski animasyon varsa durdur karýþmasýn
-        StartCoroutine(AnimateScore());
-
-        // 3. Ortada Çýkan "+1000" Animasyonunu Baþlat
-        StartCoroutine(ShowPopUp(addedAmount));
-    }
-
-    // --- ANIMASYON 1: SKOR SAYACI (0 -> 1000) ---
-    IEnumerator AnimateScore()
-    {
-        float start = displayedScore;
-        float end = currentScore;
-        float t = 0;
-
-        while (t < 1)
+        // 2. Paneli Aç
+        if (gameOverPanel != null)
         {
-            t += Time.deltaTime * countSpeed;
-            // Lerp: Ýki sayý arasýný yumuþakça doldurur
-            displayedScore = (int)Mathf.Lerp(start, end, t);
+            gameOverPanel.SetActive(true);
 
-            scoreText.text = displayedScore.ToString() + "$";
-            yield return null;
+            // Skor Tablosu: "Kazanç: 500 $ | Toplam Servet: 15000 $"
+            if (finalScoreText != null)
+            {
+                finalScoreText.text = $"KAZANÇ: {matchEarnings} $\nTOPLAM SERVET: {localTotalBank} $";
+            }
         }
 
-        // Garanti olsun diye döngü bitince net sayýyý yaz
-        displayedScore = currentScore;
-        scoreText.text = currentScore.ToString() + "$";
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+
+        var localPlayer = NetworkManager.Singleton.LocalClient.PlayerObject;
+        if (localPlayer != null)
+        {
+            localPlayer.GetComponent<FirstPersonController>().enabled = false;
+        }
     }
 
-    // --- ANIMASYON 2: POP-UP (+1000 yazýp uçma) ---
-    IEnumerator ShowPopUp(int amount)
+    // --- KAYIT SÝSTEMÝ (PLAYER PREFS) ---
+
+    // Parayý Kaydet
+    void SaveMoney()
     {
-        popUpText.gameObject.SetActive(true);
-        popUpText.text = "+" + amount.ToString() + "$";
+        PlayerPrefs.SetInt("MyTotalMoney", localTotalBank);
+        PlayerPrefs.Save();
+        Debug.Log("Oyun Kaydedildi! Yeni Bakiye: " + localTotalBank);
+    }
 
-        // Baþlangýç pozisyonunu ve rengini sýfýrla
-        popUpText.alpha = 1;
-        Vector3 startPos = popUpText.transform.localPosition;
-        Vector3 endPos = startPos + Vector3.up * 100; // 100 birim yukarý uçsun
-
-        float t = 0;
-        while (t < 1)
+    // Parayý Yükle
+    void LoadMoney()
+    {
+        // Eðer daha önce kayýt varsa yükle, yoksa 0 yap
+        if (PlayerPrefs.HasKey("MyTotalMoney"))
         {
-            t += Time.deltaTime * 2; // Hýzlýca uçsun
-
-            // Yukarý kaydýr
-            popUpText.transform.localPosition = Vector3.Lerp(startPos, endPos, t);
-
-            // Yavaþça þeffaflaþ (Fade Out)
-            popUpText.alpha = Mathf.Lerp(1, 0, t);
-
-            yield return null;
+            localTotalBank = PlayerPrefs.GetInt("MyTotalMoney");
+            Debug.Log("Kayýt Yüklendi. Bakiye: " + localTotalBank);
         }
+        else
+        {
+            localTotalBank = 0;
+        }
+    }
 
-        // Ýþ bitince kapat ve yerine koy
-        popUpText.gameObject.SetActive(false);
-        popUpText.transform.localPosition = startPos;
+    void UpdateMoneyUI()
+    {
+        if (moneyText != null) moneyText.text = "0 $"; // Baþlangýçta 0 görünür
     }
 }

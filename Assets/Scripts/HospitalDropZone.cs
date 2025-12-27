@@ -4,64 +4,91 @@ using UnityEngine;
 public class HospitalDropZone : NetworkBehaviour
 {
     [Header("AYARLAR")]
-    public int rewardAmount = 1000; // Hasta baþý kaç para?
-    public string patientTag = "Patient"; // Hastanýn Tag'i ne?
+    public int rewardAmount = 1000; // Canlý hasta parasý
+    public string patientTag = "Patient"; // Hastanýn Tag'i
 
     private void OnTriggerEnter(Collider other)
     {
-        // Sadece Server karar verir (Hile olmasýn diye)
+        // Sadece Server karar verir
         if (!IsServer) return;
 
-        // Giren þeyin köküne bak (Çünkü collider kolda bacakta olabilir)
         Transform rootObj = other.transform.root;
 
-        // 1. Giren þey bir "Hasta" mý? (Tag kontrolü)
+        // 1. DURUM: HASTA (Kucakta veya Yerde atýldýysa)
         if (rootObj.CompareTag(patientTag))
         {
-            // Network objesini al
-            if (rootObj.TryGetComponent(out NetworkObject patientNetObj))
-            {
-                // Hastayý oyundan sil (Despawn)
-                patientNetObj.Despawn();
-
-                // Parayý ver
-                AddReward();
-            }
+            ProcessPatient(rootObj.gameObject);
         }
-        // 2. Veya giren þey "Sedye" mi? (Sedye içindeki hastayý bulalým)
-        else if (rootObj.GetComponent<Stretcher>() != null) // Sedyede bu script var diye referans aldým
+        // 2. DURUM: SEDYE (Üstünde hasta varsa)
+        else if (rootObj.GetComponent<Stretcher>() != null)
         {
-            // Sedyenin çocuklarýný tara, hasta var mý?
+            // Sedyenin içindeki çocuk objeleri tara
             foreach (Transform child in rootObj)
             {
                 if (child.CompareTag(patientTag))
                 {
-                    if (child.TryGetComponent(out NetworkObject childNetObj))
-                    {
-                        childNetObj.Despawn(); // Sadece hastayý sil, sedye kalsýn
-                        AddReward();
+                    // Hastayý bulduk, iþlemi yap
+                    ProcessPatient(child.gameObject);
 
-                        // Sedyenin "Dolu" deðiþkenini boþalt
-                        var stretcher = rootObj.GetComponent<Stretcher>();
-                        if (stretcher != null) stretcher.isFull.Value = false;
+                    // Sedyenin "Dolu" bilgisini sýfýrla ki tekrar kullanýlsýn
+                    var stretcher = rootObj.GetComponent<Stretcher>();
+                    if (stretcher != null) stretcher.isFull.Value = false;
 
-                        break; // Bir hasta yetti
-                    }
+                    break; // Bir hasta yetti, döngüden çýk
                 }
             }
         }
     }
 
+    // Hastayý inceleyip parayý verdiðimiz veya vermediðimiz yer
+    void ProcessPatient(GameObject patientObj)
+    {
+        bool isAlive = true;
+
+        // Hastanýn üzerindeki Can Scriptine ulaþ
+        var healthScript = patientObj.GetComponent<PatientHealth>();
+
+        if (healthScript != null)
+        {
+            // Eðer script varsa ve 'isDead' true ise -> Hasta ölmüþtür
+            if (healthScript.isDead.Value)
+            {
+                isAlive = false;
+            }
+        }
+
+        // --- KARAR ANI ---
+        if (isAlive)
+        {
+            // Yaþýyorsa parayý ver
+            AddReward();
+            Debug.Log($"<color=green>CANLI HASTA TESLÝM EDÝLDÝ! +{rewardAmount} $</color>");
+        }
+        else
+        {
+            // Ölüyse para yok (Hatta istersen eksi puan yazabilirsin)
+            Debug.Log("<color=red>HASTA EX OLMUÞ! PARA YOK.</color>");
+
+            // Eðer ceza kesmek istersen þu satýrý aç:
+            // if (GameManager.Instance != null) GameManager.Instance.AddMoney(-200);
+        }
+
+        // Sonuç ne olursa olsun hastayý oyundan sil (Despawn)
+        if (patientObj.TryGetComponent(out NetworkObject netObj))
+        {
+            netObj.Despawn();
+        }
+    }
+
     void AddReward()
     {
-        // GameManager varsa parayý ekle
         if (GameManager.Instance != null)
         {
             GameManager.Instance.AddMoney(rewardAmount);
         }
         else
         {
-            Debug.LogError("Kanka sahneye GameManager koymayý unuttun!");
+            Debug.LogError("Hata: Sahnede GameManager bulunamadý!");
         }
     }
 }

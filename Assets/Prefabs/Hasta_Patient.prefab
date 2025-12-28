@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 8231629145656928644}
   - component: {fileID: 491687147614729531}
   - component: {fileID: 4139236779687369104}
+  - component: {fileID: 6969098074409350965}
   m_Layer: 0
   m_Name: Hasta_Patient
   m_TagString: Untagged
@@ -50,7 +51,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 1480106315
+  GlobalObjectIdHash: 2071913873
   InScenePlacedSourceGlobalObjectIdHash: 0
   AlwaysReplicateAsRoot: 0
   SynchronizeTransform: 1
@@ -104,6 +105,26 @@ MonoBehaviour:
   InLocalSpace: 0
   Interpolate: 1
   SlerpPosition: 0
+--- !u!114 &6969098074409350965
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 261964322860374354}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 100d791ae8fcd224f8f158f44b2e9ed8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  maxLifeTime: 60
+  currentLifeTime:
+    m_InternalValue: 60
+  isDead:
+    m_InternalValue: 0
+  healthBarFill: {fileID: 7628092528051131188}
+  healthCanvas: {fileID: 8438398939271625693}
+  patientRenderer: {fileID: 2043747186491418092}
 --- !u!1 &307481074156038202
 GameObject:
   m_ObjectHideFlags: 0

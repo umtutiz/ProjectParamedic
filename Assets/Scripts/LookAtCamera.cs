@@ -4,5 +4,11 @@ using UnityEngine;
 
 public class LookAtCamera : MonoBehaviour
 {
-    void Update() { transform.LookAt(Camera.main.transform); }
+    void Update()
+    {
+        // Eðer sahnede Main Camera yoksa (henüz oyuncu doðmadýysa) iþlem yapma
+        if (Camera.main == null) return;
+
+        transform.LookAt(Camera.main.transform);
+    }
 }

@@ -8,31 +8,52 @@ public class PlayerInteractionUI : NetworkBehaviour
     public float reachDistance = 5.0f;
     public LayerMask interactableLayers;
 
-    private Camera playerCam;
+    [Header("KAMERA AYARI")]
+    // BURASI ÖNEMLÝ: Inspector'dan karakterin içindeki kamerayý buraya sürükle!
+    public Camera playerCamera;
+
     private PlayerGrab playerGrab;
 
     public override void OnNetworkSpawn()
     {
-        if (!IsOwner)
+        // Karakter bize aitse çalýþtýr, deðilse kapat
+        if (IsOwner)
         {
-            enabled = false;
-            return;
+            if (playerCamera != null)
+            {
+                playerCamera.gameObject.SetActive(true); // Kamerayý aç
+                // Sesleri duymak için AudioListener ekle (yoksa ekle)
+                if (playerCamera.GetComponent<AudioListener>() == null)
+                    playerCamera.gameObject.AddComponent<AudioListener>();
+            }
+            playerGrab = GetComponent<PlayerGrab>();
         }
-        playerCam = GetComponentInChildren<Camera>();
-        playerGrab = GetComponent<PlayerGrab>();
+        else
+        {
+            // Baþkasýnýn karakteriyse kamerasýný kapat ki ekran karýþmasýn
+            if (playerCamera != null) playerCamera.gameObject.SetActive(false);
+            enabled = false; // Update fonksiyonunu durdur
+        }
     }
 
     void Update()
     {
+        // Karakter benim deðilse veya UI Manager hazýr deðilse çalýþma
         if (!IsOwner) return;
         if (GameUIManager.Instance == null) return;
+
+        // Kamera atanmamýþsa hata vermesin diye durdur
+        if (playerCamera == null) return;
 
         CheckLookingObject();
     }
 
     void CheckLookingObject()
     {
-        Ray ray = playerCam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
+
+        Debug.DrawRay(playerCamera.transform.position, playerCamera.transform.forward * reachDistance, Color.red);
+        // Senin yazdýðýn mantýðýn aynýsý, sadece playerCamera deðiþkenini kullanýyor
+        Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
         RaycastHit hit;
 
         TextMeshProUGUI txt = GameUIManager.Instance.interactionText;
@@ -45,12 +66,7 @@ public class PlayerInteractionUI : NetworkBehaviour
 
         if (isHandFull)
         {
-            // Debug: Elimizde ne olduðunu görelim
-            // (Konsolda kýrmýzý hata çýkarsa PlayerGrab'de currentGrabbedObject PUBLIC yapýlmamýþ demektir)
-            // Debug.Log("Elimdeki: " + playerGrab.currentGrabbedObject.name + " | Tag: " + playerGrab.currentGrabbedObject.tag);
-
             // Hem objenin kendisine, hem de en tepedeki babasýna (Root) bakýyoruz.
-            // Bazen script içerideki kemikte olur, ama Tag en dýþtaki kutudadýr.
             if (playerGrab.currentGrabbedObject.CompareTag("Patient") ||
                 playerGrab.currentGrabbedObject.transform.root.CompareTag("Patient"))
             {
@@ -69,7 +85,7 @@ public class PlayerInteractionUI : NetworkBehaviour
                 if (holdingPatient)
                 {
                     txt.text = "[R] Place Patient"; // Hasta var -> Koy
-                    txt.color = Color.green; // Yazý yeþil olsun belli olsun
+                    txt.color = Color.green;
                 }
                 else if (!isHandFull)
                 {
@@ -78,7 +94,7 @@ public class PlayerInteractionUI : NetworkBehaviour
                 }
                 else
                 {
-                    // Elim dolu ama HASTA DEÐÝL (Kutu vs.), o zaman yazý çýkmasýn
+                    // Elim dolu ama HASTA DEÐÝL, o zaman yazý çýkmasýn
                     txt.gameObject.SetActive(false);
                     return;
                 }

@@ -1234,29 +1234,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 33b0b6ee5acea7343bac5e4934cf97a9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  <IsLocalPlayer>k__BackingField: 0
-  <IsOwner>k__BackingField: 0
-  <IsServer>k__BackingField: 0
-  <ServerIsHost>k__BackingField: 0
-  <IsClient>k__BackingField: 0
-  <IsHost>k__BackingField: 0
-  <IsOwnedByServer>k__BackingField: 0
-  <IsSpawned>k__BackingField: 0
-  m_NetworkObject: {fileID: 0}
-  <NetworkObjectId>k__BackingField: 0
-  <NetworkBehaviourId>k__BackingField: 0
-  NetworkBehaviourIdCache: 0
-  <OwnerClientId>k__BackingField: 0
-  m_VarInit: 0
-  <m_TargetIdBeingSynchronized>k__BackingField: 0
-  patientPoint: {fileID: 1882291424}
-  isFull: {m_NetworkBehaviour: {fileID: 0}, m_InternalNetworkManager: {fileID: 0},
-    <HasBeenInitialized>k__BackingField: 0, m_IsDirty: 0, <Name>k__BackingField: ,
-    NetworkUpdaterCheck: 0, m_InternalValue: 0, m_LastInternalValue: 0, m_PreviousValue: 0,
-    m_HasPreviousValue: 0, m_IsDisposed: 0}
-  searchRadius: 5
-  lockPointName: AmbulanceLockPoint
-  isLocked: 0
 --- !u!1 &915859506
 GameObject:
   m_ObjectHideFlags: 0
@@ -3003,11 +2980,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 06daaeecee16aa541930f59d25a35421, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  gameDuration: 180
-  timerText: {fileID: 0}
-  moneyText: {fileID: 0}
-  gameOverPanel: {fileID: 0}
-  finalScoreText: {fileID: 0}
+  gameDuration: 900
+  timerText: {fileID: 915859508}
+  moneyText: {fileID: 1524204770}
+  gameOverPanel: {fileID: 930991074}
+  finalScoreText: {fileID: 2083570070}
 --- !u!1 &1658258819
 GameObject:
   m_ObjectHideFlags: 0

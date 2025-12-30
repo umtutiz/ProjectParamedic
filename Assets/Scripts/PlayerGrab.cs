@@ -5,6 +5,9 @@ public class PlayerGrab : NetworkBehaviour
 {
     [Header("Ayarlar")]
     public Transform holdPoint;
+    // BURASI YENÝ: Kamerayý buraya sürükle veya kod bulsun
+    public Camera playerCamera;
+
     public float grabRadius = 0.8f;
     public float grabDistance = 5f;
     public float throwForce = 15f;
@@ -17,7 +20,7 @@ public class PlayerGrab : NetworkBehaviour
     public float heldObjectAngularDrag = 10f;
 
     private SpringJoint currentJoint;
-    public GrabbableObject currentGrabbedObject; // <-- PUBLIC YAPTIK KÝ UI GÖRSÜN
+    public GrabbableObject currentGrabbedObject;
     private int originalLayer;
     private Collider myCollider;
     private float initialObjectDrag;
@@ -26,6 +29,12 @@ public class PlayerGrab : NetworkBehaviour
     public override void OnNetworkSpawn()
     {
         myCollider = GetComponent<Collider>();
+
+        // Eðer Inspector'dan atamayý unutursan kod kendi bulsun:
+        if (IsOwner && playerCamera == null)
+        {
+            playerCamera = GetComponentInChildren<Camera>();
+        }
     }
 
     void Update()
@@ -37,9 +46,6 @@ public class PlayerGrab : NetworkBehaviour
         {
             TryGrab();
         }
-
-        // DÝKKAT: R TUÞUNU BURADAN SÝLDÝK. 
-        // ÇÜNKÜ ARTIK STRETCHER SCRIPTI KENDÝSÝ R'YE BASINCA ALIYOR.
 
         // G TUÞU: YERE BIRAK
         if (Input.GetKeyDown(KeyCode.G) && currentGrabbedObject != null)
@@ -74,10 +80,13 @@ public class PlayerGrab : NetworkBehaviour
 
     void TryGrab()
     {
-        if (Camera.main == null) return;
-        Transform camTransform = Camera.main.transform;
+        // Camera.main YERÝNE playerCamera KULLANIYORUZ
+        if (playerCamera == null) return;
+
+        Transform camTransform = playerCamera.transform;
         RaycastHit hit;
 
+        // Raycast'i kendi kameramýzdan atýyoruz
         if (Physics.SphereCast(camTransform.position, grabRadius, camTransform.forward, out hit, grabDistance, interactableLayer))
         {
             GrabbableObject grabbable = hit.transform.GetComponentInParent<GrabbableObject>();
@@ -104,11 +113,9 @@ public class PlayerGrab : NetworkBehaviour
                 rb.drag = initialObjectDrag;
                 rb.angularDrag = initialObjectAngularDrag;
 
-                // --- YENÝ EKLENEN KISIM: FIRLATIRKEN FÝZÝÐÝ KALÝTELÝ YAP ---
-                // Yerin içine girmeyi önleyen ayar budur
                 rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
                 rb.interpolation = RigidbodyInterpolation.Interpolate;
-                rb.velocity = Vector3.ClampMagnitude(rb.velocity, 20f); // Çok aþýrý hýzlanmayý engelle
+                rb.velocity = Vector3.ClampMagnitude(rb.velocity, 20f);
             }
 
             SetLayerRecursively(currentGrabbedObject.gameObject, originalLayer);
@@ -124,12 +131,16 @@ public class PlayerGrab : NetworkBehaviour
         {
             GrabbableObject objToThrow = currentGrabbedObject;
             Drop();
-            Vector3 throwDir = Camera.main.transform.forward;
-            RequestThrowServerRpc(objToThrow.NetworkObjectId, throwDir * throwForce);
+
+            // FIRLATIRKEN DE playerCamera KULLANIYORUZ
+            if (playerCamera != null)
+            {
+                Vector3 throwDir = playerCamera.transform.forward;
+                RequestThrowServerRpc(objToThrow.NetworkObjectId, throwDir * throwForce);
+            }
         }
     }
 
-    // STRETCHER BU FONKSÝYONU ÇAÐIRACAK (ZORLA BIRAKTIRMA)
     public void ForceDrop()
     {
         if (currentGrabbedObject != null)
@@ -158,8 +169,7 @@ public class PlayerGrab : NetworkBehaviour
         }
     }
 
-    // --- RPC KISMI ---
-
+    // --- RPC KISMI AYNEN KALIYOR ---
     [ServerRpc]
     void RequestGrabServerRpc(ulong targetObjectId)
     {
@@ -211,13 +221,11 @@ public class PlayerGrab : NetworkBehaviour
             initialObjectDrag = targetRb.drag;
             initialObjectAngularDrag = targetRb.angularDrag;
 
-            // --- YENÝ EKLENEN KISIM: ELDEYKEN FÝZÝÐÝ HAFÝFLET ---
-            // Elde taþýrken Continuous olursa titreme yapar, o yüzden Discrete yapýyoruz
             targetRb.collisionDetectionMode = CollisionDetectionMode.Discrete;
             targetRb.interpolation = RigidbodyInterpolation.None;
 
             originalLayer = networkObject.gameObject.layer;
-            SetLayerRecursively(networkObject.gameObject, 2);
+            SetLayerRecursively(networkObject.gameObject, 2); // 2: Ignore Raycast Layer
 
             targetRb.drag = heldObjectDrag;
             targetRb.angularDrag = heldObjectAngularDrag;

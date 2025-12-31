@@ -5,7 +5,6 @@ public class PlayerGrab : NetworkBehaviour
 {
     [Header("Ayarlar")]
     public Transform holdPoint;
-    // BURASI YENÝ: Kamerayý buraya sürükle veya kod bulsun
     public Camera playerCamera;
 
     public float grabRadius = 0.8f;
@@ -29,8 +28,6 @@ public class PlayerGrab : NetworkBehaviour
     public override void OnNetworkSpawn()
     {
         myCollider = GetComponent<Collider>();
-
-        // Eðer Inspector'dan atamayý unutursan kod kendi bulsun:
         if (IsOwner && playerCamera == null)
         {
             playerCamera = GetComponentInChildren<Camera>();
@@ -41,7 +38,7 @@ public class PlayerGrab : NetworkBehaviour
     {
         if (!IsOwner) return;
 
-        // E TUÞU: Sadece YERDEN ALMAK için
+        // E TUÞU: YERDEN AL
         if (Input.GetKeyDown(KeyCode.E) && currentGrabbedObject == null)
         {
             TryGrab();
@@ -59,7 +56,7 @@ public class PlayerGrab : NetworkBehaviour
             Throw();
         }
 
-        // MOUSE TEKERLEÐÝ: MESAFE
+        // MOUSE TEKERLEÐÝ
         if (currentGrabbedObject != null)
         {
             float scroll = Input.GetAxis("Mouse ScrollWheel");
@@ -80,13 +77,10 @@ public class PlayerGrab : NetworkBehaviour
 
     void TryGrab()
     {
-        // Camera.main YERÝNE playerCamera KULLANIYORUZ
         if (playerCamera == null) return;
-
         Transform camTransform = playerCamera.transform;
         RaycastHit hit;
 
-        // Raycast'i kendi kameramýzdan atýyoruz
         if (Physics.SphereCast(camTransform.position, grabRadius, camTransform.forward, out hit, grabDistance, interactableLayer))
         {
             GrabbableObject grabbable = hit.transform.GetComponentInParent<GrabbableObject>();
@@ -94,8 +88,20 @@ public class PlayerGrab : NetworkBehaviour
 
             if (grabbable != null)
             {
+                // BURADAKÝ STRETCHER KONTROLÜNÜ KALDIRDIK
+                // ÇÜNKÜ ARTIK SEDYE KENDÝ ÝÞÝNÝ KENDÝ YAPIYOR
+
                 RequestGrabServerRpc(grabbable.NetworkObjectId);
             }
+        }
+    }
+
+    // BU FONKSÝYON ÞART (Stretcher bunu çaðýracak)
+    public void ForceDrop()
+    {
+        if (currentGrabbedObject != null)
+        {
+            Drop();
         }
     }
 
@@ -112,7 +118,6 @@ public class PlayerGrab : NetworkBehaviour
             {
                 rb.drag = initialObjectDrag;
                 rb.angularDrag = initialObjectAngularDrag;
-
                 rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
                 rb.interpolation = RigidbodyInterpolation.Interpolate;
                 rb.velocity = Vector3.ClampMagnitude(rb.velocity, 20f);
@@ -132,7 +137,6 @@ public class PlayerGrab : NetworkBehaviour
             GrabbableObject objToThrow = currentGrabbedObject;
             Drop();
 
-            // FIRLATIRKEN DE playerCamera KULLANIYORUZ
             if (playerCamera != null)
             {
                 Vector3 throwDir = playerCamera.transform.forward;
@@ -141,21 +145,10 @@ public class PlayerGrab : NetworkBehaviour
         }
     }
 
-    public void ForceDrop()
-    {
-        if (currentGrabbedObject != null)
-        {
-            Drop();
-        }
-    }
-
     void SetLayerRecursively(GameObject obj, int newLayer)
     {
         obj.layer = newLayer;
-        foreach (Transform child in obj.transform)
-        {
-            SetLayerRecursively(child.gameObject, newLayer);
-        }
+        foreach (Transform child in obj.transform) SetLayerRecursively(child.gameObject, newLayer);
     }
 
     void ToggleCollision(GameObject targetObj, bool enableCollision)
@@ -169,7 +162,6 @@ public class PlayerGrab : NetworkBehaviour
         }
     }
 
-    // --- RPC KISMI AYNEN KALIYOR ---
     [ServerRpc]
     void RequestGrabServerRpc(ulong targetObjectId)
     {
@@ -195,10 +187,7 @@ public class PlayerGrab : NetworkBehaviour
         if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(targetObjectId, out NetworkObject networkObject))
         {
             Rigidbody[] rbs = networkObject.GetComponentsInChildren<Rigidbody>();
-            foreach (Rigidbody rb in rbs)
-            {
-                rb.AddForce(force, ForceMode.Impulse);
-            }
+            foreach (Rigidbody rb in rbs) rb.AddForce(force, ForceMode.Impulse);
         }
     }
 
@@ -225,7 +214,7 @@ public class PlayerGrab : NetworkBehaviour
             targetRb.interpolation = RigidbodyInterpolation.None;
 
             originalLayer = networkObject.gameObject.layer;
-            SetLayerRecursively(networkObject.gameObject, 2); // 2: Ignore Raycast Layer
+            SetLayerRecursively(networkObject.gameObject, 2);
 
             targetRb.drag = heldObjectDrag;
             targetRb.angularDrag = heldObjectAngularDrag;

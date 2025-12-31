@@ -1,76 +1,98 @@
 using Unity.Netcode;
-using Unity.Netcode.Components;
 using UnityEngine;
 
 public class Stretcher : NetworkBehaviour
 {
     [Header("AYARLAR")]
-    public Transform patientHoldPoint;
-    public float lockRadius = 3.0f;
+    public Transform patientHoldPoint; // Hastanýn yatacaðý nokta
+    public float lockRadius = 3.0f;    // Ne kadar yakýndakini kapsýn?
 
-    private GrabbableObject lockedPatient;
+    // Herkesin görebilmesi için NetworkVariable
     public NetworkVariable<bool> isFull = new NetworkVariable<bool>(false);
+
+    private GrabbableObject lockedPatient; // O an kilitli olan hasta
 
     void LateUpdate()
     {
-        // R TUÞU
+        // 1. R TUÞU KONTROLÜ (Senin eski kodun gibi buraya koydum)
+        // Sadece yakýndaysak çalýþsýn istersen mesafe kontrolü de ekleriz ama þimdilik senin kodun
         if (Input.GetKeyDown(KeyCode.R))
         {
             if (lockedPatient != null)
+            {
+                // Zaten hasta varsa, R'ye basýnca býrak
                 RequestDetachPatientServerRpc();
+            }
             else
+            {
+                // Hasta yoksa, etrafta hasta ara ve kilitle
                 TryAttachPatient();
+            }
         }
 
-        // HARD LOCK (Japon Yapýþtýrýcýsý)
+        // 2. HARD LOCK (Japon Yapýþtýrýcýsý)
+        // Hasta varsa, her karede ZORLA pozisyonu eþitle. Asla kayamaz.
         if (lockedPatient != null)
         {
-            if (patientHoldPoint != null)
-            {
-                lockedPatient.transform.position = patientHoldPoint.position;
-                lockedPatient.transform.rotation = patientHoldPoint.rotation;
-            }
+            lockedPatient.transform.position = patientHoldPoint.position;
+            lockedPatient.transform.rotation = patientHoldPoint.rotation;
         }
     }
 
     void TryAttachPatient()
     {
+        // Etraftaki objeleri tara
         Collider[] hits = Physics.OverlapSphere(patientHoldPoint.position, lockRadius);
         foreach (var hit in hits)
         {
             GrabbableObject grabbable = hit.GetComponentInParent<GrabbableObject>();
             if (grabbable == null) grabbable = hit.GetComponent<GrabbableObject>();
 
+            // Kendisi deðilse ve bir grabbable obje bulduysak
             if (grabbable != null && grabbable.gameObject != gameObject)
             {
-                Debug.Log("BULUNDU: " + grabbable.name);
-                ForcePlayerToDrop(grabbable);
+                // ÖNCE OYUNCUNUN ELÝNDEN DÜÞÜRT (Burasý Çok Önemli)
+                ForcePlayerToDrop();
+
+                // Sonra Server'a "Bunu kilitle" de
                 RequestAttachPatientServerRpc(grabbable.NetworkObjectId);
-                return;
+                return; // Ýlk bulduðunu al ve çýk
             }
         }
     }
 
-    void ForcePlayerToDrop(GrabbableObject targetItem)
+    // Oyuncunun elindekini zorla býraktýran fonksiyon
+    void ForcePlayerToDrop()
     {
-        if (NetworkManager.Singleton.LocalClient != null &&
-            NetworkManager.Singleton.LocalClient.PlayerObject != null)
+        // Local oyuncuyu bul
+        if (NetworkManager.Singleton.LocalClient != null && NetworkManager.Singleton.LocalClient.PlayerObject != null)
         {
             var playerGrab = NetworkManager.Singleton.LocalClient.PlayerObject.GetComponent<PlayerGrab>();
-            if (playerGrab != null) playerGrab.ForceDrop();
+            // Oyuncunun elinde bir þey varsa býraktýr
+            if (playerGrab != null)
+            {
+                playerGrab.ForceDrop();
+            }
         }
     }
 
-    // --- SERVER ---
+    // --- SERVER TARAFI ---
 
     [ServerRpc(RequireOwnership = false)]
     void RequestAttachPatientServerRpc(ulong patientId)
     {
+        // Eðer zaten doluysak iþlem yapma
+        if (isFull.Value) return;
+
         if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(patientId, out NetworkObject patientNetObj))
         {
-            // Sahipliði sil (Server yönetsin)
+            // Sahipliði kaldýr
             patientNetObj.RemoveOwnership();
-            patientNetObj.TrySetParent(patientHoldPoint);
+
+            // Dolu olduðunu iþaretle
+            isFull.Value = true;
+
+            // Tüm clientlara bildir
             AttachClientRpc(patientId);
         }
     }
@@ -78,74 +100,57 @@ public class Stretcher : NetworkBehaviour
     [ServerRpc(RequireOwnership = false)]
     void RequestDetachPatientServerRpc()
     {
-        if (lockedPatient == null) return;
+        if (!isFull.Value) return;
 
-        // Null check ekledik
-        if (lockedPatient.TryGetComponent(out NetworkObject netObj))
-        {
-            netObj.TryRemoveParent();
-            DetachClientRpc(netObj.NetworkObjectId);
-        }
+        isFull.Value = false;
+        DetachClientRpc();
     }
 
-    // --- CLIENT (HATA BURADAYDI, DÜZELTÝLDÝ) ---
+    // --- CLIENT TARAFI (Herkesin ekranýnda çalýþýr) ---
 
     [ClientRpc]
     void AttachClientRpc(ulong patientId)
     {
         if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(patientId, out NetworkObject patientNetObj))
         {
-            // HATA ÇÖZÜMÜ 1: Scripti sadece kendinde deðil, çocuklarýnda da ara!
+            // Hastayý bul
             lockedPatient = patientNetObj.GetComponent<GrabbableObject>();
             if (lockedPatient == null) lockedPatient = patientNetObj.GetComponentInChildren<GrabbableObject>();
 
-            // HATA ÇÖZÜMÜ 2: Hala bulamadýysa oyunu çökertme, iþlemi iptal et.
-            if (lockedPatient == null)
+            if (lockedPatient != null)
             {
-                Debug.LogError("HATA: GrabbableObject scripti bulunamadý! ID: " + patientId);
-                return;
+                // Fiziðini tamamen kapat (Titremeyi önler)
+                Rigidbody rb = lockedPatient.GetComponent<Rigidbody>();
+                if (rb == null) rb = lockedPatient.GetComponentInChildren<Rigidbody>();
+
+                if (rb != null)
+                {
+                    rb.isKinematic = true;
+                }
+
+                // Anýnda pozisyonu eþitle
+                lockedPatient.transform.position = patientHoldPoint.position;
+                lockedPatient.transform.rotation = patientHoldPoint.rotation;
             }
-
-            // 1. NetworkTransform'u KAPAT (Varsa)
-            NetworkTransform netTransform = lockedPatient.GetComponent<NetworkTransform>();
-            if (netTransform != null) netTransform.enabled = false;
-
-            // 2. Fiziði KAPAT
-            Rigidbody[] rbs = lockedPatient.GetComponentsInChildren<Rigidbody>();
-            Collider[] cols = lockedPatient.GetComponentsInChildren<Collider>();
-
-            foreach (var rb in rbs)
-            {
-                rb.isKinematic = true;
-                rb.velocity = Vector3.zero;
-            }
-            foreach (var col in cols) col.enabled = false;
-
-            // 3. Konumu eþitle
-            lockedPatient.transform.position = patientHoldPoint.position;
-            lockedPatient.transform.rotation = patientHoldPoint.rotation;
-
-            Debug.Log("KÝLÝTLENDÝ: " + lockedPatient.name);
         }
     }
 
     [ClientRpc]
-    void DetachClientRpc(ulong patientId)
+    void DetachClientRpc()
     {
-        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(patientId, out NetworkObject patientNetObj))
+        if (lockedPatient != null)
         {
-            // Geri açarken de null check yapýyoruz
-            NetworkTransform netTransform = patientNetObj.GetComponent<NetworkTransform>();
-            if (netTransform != null) netTransform.enabled = true;
+            // Fiziðini geri aç
+            Rigidbody rb = lockedPatient.GetComponent<Rigidbody>();
+            if (rb == null) rb = lockedPatient.GetComponentInChildren<Rigidbody>();
 
-            Rigidbody[] rbs = patientNetObj.GetComponentsInChildren<Rigidbody>();
-            Collider[] cols = patientNetObj.GetComponentsInChildren<Collider>();
+            if (rb != null)
+            {
+                rb.isKinematic = false;
+            }
 
-            foreach (var rb in rbs) rb.isKinematic = false;
-            foreach (var col in cols) col.enabled = true;
-
+            // Deðiþkeni boþalt (Artýk LateUpdate çalýþmayacak)
             lockedPatient = null;
-            Debug.Log("KÝLÝT AÇILDI!");
         }
     }
 }

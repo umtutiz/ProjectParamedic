@@ -6984,7 +6984,7 @@ MonoBehaviour:
   morgueSpawnPoint: {fileID: 2029927292}
   bloodSpawnPoint: {fileID: 1101961362}
   boxingAzrael: {fileID: 1230677007}
-  gunAzrael: {fileID: 0}
+  gunAzrael: {fileID: 549285129}
   shockMachine: {fileID: 0}
   runnerAzrael: {fileID: 246176860}
   morgueAzrael: {fileID: 0}

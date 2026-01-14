@@ -10,6 +10,7 @@ public class GameManager : NetworkBehaviour
 
     [Header("AYARLAR")]
     public float gameDuration = 180f; // 3 Dakika
+    public int startingMoney = 500;   // YENÝ: Baþlangýç parasý (Market testi için)
 
     [Header("UI BAÐLANTILARI")]
     public TextMeshProUGUI timerText;
@@ -20,10 +21,10 @@ public class GameManager : NetworkBehaviour
     // NETCODE DEÐÝÞKENLERÝ
     private NetworkVariable<float> netTimeLeft = new NetworkVariable<float>(180f);
 
-    // Bu sadece O ANKÝ maçýn parasý
-    private NetworkVariable<int> currentMatchMoney = new NetworkVariable<int>(0);
+    // Bu O ANKÝ maçýn harcanabilir parasý (Hem cüzdan hem skor)
+    public NetworkVariable<int> currentMatchMoney = new NetworkVariable<int>(0);
 
-    // TOPLAM ANA PARA (Bunu kayýttan çekeceðiz)
+    // TOPLAM ANA PARA (Kayýttan çekilen)
     private int localTotalBank = 0;
 
     private bool isGameActive = true;
@@ -36,31 +37,28 @@ public class GameManager : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
-        // 1. OYUN BAÞLARKEN ESKÝ PARAYI YÜKLE (LOAD)
+        // 1. OYUN BAÞLARKEN ESKÝ PARAYI YÜKLE
         LoadMoney();
 
         if (IsServer)
         {
             netTimeLeft.Value = gameDuration;
-            currentMatchMoney.Value = 0;
+
+            // YENÝ: Baþlangýçta 0 deðil, belirlenen parayla baþla (Marketten eþya alabilmek için)
+            currentMatchMoney.Value = startingMoney;
         }
 
         if (gameOverPanel != null) gameOverPanel.SetActive(false);
-
-        // Ekrana baþlangýçta toplam paramýzý yazalým
         UpdateMoneyUI();
     }
 
     private void Update()
     {
-        // UI GÜNCELLEME
         UpdateTimerUI();
 
-        // Para yazýsýnda: "Maç Parasý (Toplam Banka)" þeklinde gösterebiliriz
-        // Veya sadece maç parasýný gösteririz, tercih senin.
+        // Para yazýsýný güncelle
         if (moneyText != null)
         {
-            // Örnek: 150 $ (Maçtaki kazanç)
             moneyText.text = currentMatchMoney.Value.ToString() + " $";
         }
 
@@ -96,61 +94,71 @@ public class GameManager : NetworkBehaviour
         currentMatchMoney.Value += amount;
     }
 
+    // --- YENÝ EKLENEN: PARA HARCAMA (MARKET ÝÇÝN) ---
+    // Bu fonksiyonu MarketSystem çaðýracak
+    public bool TrySpendMoney(int amount)
+    {
+        if (!IsServer) return false;
+
+        // Paramýz yetiyor mu?
+        if (currentMatchMoney.Value >= amount)
+        {
+            currentMatchMoney.Value -= amount; // Parayý düþ
+            return true; // Ýþlem baþarýlý
+        }
+        else
+        {
+            return false; // Yetersiz bakiye
+        }
+    }
+    // ------------------------------------------------
+
     // --- OYUN BÝTÝÞÝ ---
     void EndGame()
     {
         isGameActive = false;
-        // Server herkese "Oyun bitti, þu kadar kazandýnýz" der
+        // Server herkese "Oyun bitti, þu kadar kazandýnýz (kalan para)" der
         EndGameClientRpc(currentMatchMoney.Value);
     }
 
     [ClientRpc]
-    void EndGameClientRpc(int matchEarnings)
+    void EndGameClientRpc(int remainingMoney)
     {
-        // 1. MAÇ PARASINI KUMBARAYA EKLE VE KAYDET (AUTO SAVE)
-        localTotalBank += matchEarnings;
-        SaveMoney(); // <--- ÝÞTE KAYIT BURADA YAPILIYOR
+        // Kalan parayý bankaya ekle
+        localTotalBank += remainingMoney;
+        SaveMoney();
 
-        // 2. Paneli Aç
         if (gameOverPanel != null)
         {
             gameOverPanel.SetActive(true);
 
-            // Skor Tablosu: "Kazanç: 500 $ | Toplam Servet: 15000 $"
             if (finalScoreText != null)
             {
-                finalScoreText.text = $"KAZANÇ: {matchEarnings} $\nTOPLAM SERVET: {localTotalBank} $";
+                finalScoreText.text = $"KALAN PARA: {remainingMoney} $\nTOPLAM SERVET: {localTotalBank} $";
             }
         }
 
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
 
-        var localPlayer = NetworkManager.Singleton.LocalClient.PlayerObject;
-        if (localPlayer != null)
-        {
-            localPlayer.GetComponent<FirstPersonController>().enabled = false;
-        }
+        // Karakter kontrolcüsünü bul ve kapat (Hareket edemesin)
+        // Not: Burada kendi Player karakterini bulma yöntemin neyse onu kullan
+        // Örnek: NetworkManager.Singleton.LocalClient.PlayerObject...
     }
 
-    // --- KAYIT SÝSTEMÝ (PLAYER PREFS) ---
-
-    // Parayý Kaydet
+    // --- KAYIT SÝSTEMÝ ---
     void SaveMoney()
     {
         PlayerPrefs.SetInt("MyTotalMoney", localTotalBank);
         PlayerPrefs.Save();
-        Debug.Log("Oyun Kaydedildi! Yeni Bakiye: " + localTotalBank);
+        Debug.Log("Kayýt Edildi. Yeni Toplam: " + localTotalBank);
     }
 
-    // Parayý Yükle
     void LoadMoney()
     {
-        // Eðer daha önce kayýt varsa yükle, yoksa 0 yap
         if (PlayerPrefs.HasKey("MyTotalMoney"))
         {
             localTotalBank = PlayerPrefs.GetInt("MyTotalMoney");
-            Debug.Log("Kayýt Yüklendi. Bakiye: " + localTotalBank);
         }
         else
         {
@@ -160,6 +168,6 @@ public class GameManager : NetworkBehaviour
 
     void UpdateMoneyUI()
     {
-        if (moneyText != null) moneyText.text = "0 $"; // Baþlangýçta 0 görünür
+        if (moneyText != null) moneyText.text = "0 $";
     }
 }

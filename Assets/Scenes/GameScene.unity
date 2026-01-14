@@ -1451,7 +1451,7 @@ Transform:
   m_GameObject: {fileID: 399417062}
   serializedVersion: 2
   m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: 0, y: 0.0000013411044, z: -16.25}
+  m_LocalPosition: {x: 0, y: 0.0000030398364, z: -30.5}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -3408,8 +3408,8 @@ Transform:
   m_GameObject: {fileID: 765864348}
   serializedVersion: 2
   m_LocalRotation: {x: 0.5, y: -0.5, z: 0.5, w: 0.5}
-  m_LocalPosition: {x: 5, y: 0, z: -5.6249976}
-  m_LocalScale: {x: 2.125, y: 1, z: 1}
+  m_LocalPosition: {x: 5, y: 0, z: -12.74999}
+  m_LocalScale: {x: 3.550074, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 188264267}
@@ -5210,8 +5210,8 @@ Transform:
   m_GameObject: {fileID: 1100372255}
   serializedVersion: 2
   m_LocalRotation: {x: 0.5, y: 0.5, z: -0.5, w: 0.5}
-  m_LocalPosition: {x: -5, y: 0, z: -5.6249976}
-  m_LocalScale: {x: 2.125, y: 1, z: 1}
+  m_LocalPosition: {x: -5, y: 0, z: -12.749993}
+  m_LocalScale: {x: 3.5500252, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 188264267}
@@ -8007,10 +8007,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   gameDuration: 900
+  startingMoney: 500
   timerText: {fileID: 915859508}
   moneyText: {fileID: 1524204770}
   gameOverPanel: {fileID: 930991074}
   finalScoreText: {fileID: 2083570070}
+  currentMatchMoney:
+    m_InternalValue: 0
 --- !u!1 &1656309156
 GameObject:
   m_ObjectHideFlags: 0

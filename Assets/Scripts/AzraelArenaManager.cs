@@ -10,47 +10,52 @@ public class AzraelArenaManager : NetworkBehaviour
     public static AzraelArenaManager Instance;
 
     [Header("ARENA IÞINLANMA NOKTALARI")]
-    public Transform boxingSpawnPoint;  // Mod 1: Boks
-    public Transform gunSpawnPoint;     // Mod 2: Silah
-    public Transform shockSpawnPoint;   // Mod 3: Þok (Defibrilatör)
-    public Transform runnerSpawnPoint;  // Mod 4: Tünel Koþusu
-    public Transform morgueSpawnPoint;  // Mod 5: Morg
-    public Transform bloodSpawnPoint;   // Mod 6: Kan Nakli
+    public Transform boxingSpawnPoint;
+    public Transform gunSpawnPoint;
+    public Transform shockSpawnPoint;
+    public Transform runnerSpawnPoint;
+    public Transform morgueSpawnPoint;
+    public Transform bloodSpawnPoint;
 
     [Header("GÖRSEL HEDEFLER & OBJELER")]
     public GameObject boxingAzrael;
     public GameObject gunAzrael;
-    public GameObject shockMachine;     // Þok cihazý modeli
-    public GameObject runnerAzrael;     // Tüneldeki Azrail
-    public GameObject morgueAzrael;     // Morgdaki Azrail
-    public GameObject bloodBag;         // Kan torbasý modeli
+    public GameObject shockMachine;
+    public GameObject runnerAzrael;
+    public GameObject morgueAzrael;
+    public GameObject bloodBag;
 
     [Header("GENEL UI")]
     public GameObject fightPanel;
-    public TextMeshProUGUI modeText;    // "ÞOKU BAS!", "KAÇ!" vs.
-    public TextMeshProUGUI infoText;    // "SPACE'E BAS", "W'YE BAS" vs.
+    public TextMeshProUGUI modeText;
+    public TextMeshProUGUI infoText;
 
     [Header("ÖZEL UI ELEMANLARI")]
-    public Slider commonSlider;         // Þok ve Can barý için ortak slider
-    public GameObject fakeGunModel;     // Silah Modu için
+    public Slider commonSlider;
+    public GameObject fakeGunModel;
 
     // --- NETWORK DEÐÝÞKENLERÝ ---
     private NetworkVariable<int> fightMode = new NetworkVariable<int>(0);
     private NetworkVariable<ulong> fightingPlayerId = new NetworkVariable<ulong>(99999);
 
-    // Oyun Ýçi Deðiþkenler
+    // OYUN ÝÇÝ DEÐÝÞKENLER
     private PatientHealth currentPatient;
     private Vector3 playerOriginalPos;
 
     // MOD ÖZEL DEÐÝÞKENLERÝ
-    private float shockValue = 0f;      // Mod 3 için ibre deðeri
-    private int shockSuccessCount = 0;  // Mod 3 kaç kere baþardýk?
+    private float shockValue = 0f;
+    private int shockSuccessCount = 0;
 
-    private KeyCode currentQTEKey;      // Mod 6 için basýlmasý gereken tuþ
-    private float qteTimer = 0f;        // Mod 6 zaman sayacý
+    private KeyCode currentQTEKey;
+    private float qteTimer = 0f;
     private int bloodSuccessCount = 0;
 
-    private NetworkVariable<bool> isAzraelLooking = new NetworkVariable<bool>(false); // Mod 5 (Morg) için
+    private NetworkVariable<bool> isAzraelLooking = new NetworkVariable<bool>(false);
+
+    // --- YENÝ EKLENEN MARKET ÖZELLÝKLERÝ ---
+    private bool bribeActive = false;      // Rüþvet verildi mi?
+    private bool batteryUpgraded = false;  // Pil takýldý mý?
+    // ---------------------------------------
 
     private void Awake() { if (Instance == null) Instance = this; }
 
@@ -62,7 +67,6 @@ public class AzraelArenaManager : NetworkBehaviour
 
     void Update()
     {
-        // Sadece seçilen oyuncuysan ve bir mod aktifse çalýþ
         if (fightingPlayerId.Value != NetworkManager.Singleton.LocalClientId || fightMode.Value == 0) return;
 
         fightPanel.SetActive(true);
@@ -78,10 +82,35 @@ public class AzraelArenaManager : NetworkBehaviour
         }
     }
 
-    // --- TETÝKLEME (PATIENT SCRIPTINDEN GELÝR) ---
+    // --- MARKET SÝSTEMÝNDEN ÇAÐRILANLAR (YENÝ) ---
+
+    public void EnableBribeMode()
+    {
+        bribeActive = true;
+        Debug.Log("RÜÞVET VERÝLDÝ! Azrail bir sonraki sefer gelmeyecek.");
+    }
+
+    public void UpgradeBattery()
+    {
+        batteryUpgraded = true;
+        Debug.Log("PÝL TAKILDI! Þok cihazý artýk daha kolay.");
+    }
+    // ----------------------------------------------
+
+    // --- TETÝKLEME ---
     public void StartAzraelEvent(PatientHealth patient)
     {
         if (!IsServer) return;
+
+        // 1. RÜÞVET KONTROLÜ (YENÝ)
+        if (bribeActive)
+        {
+            bribeActive = false; // Hakký kullandýk, sýfýrla
+            Debug.Log("AZRAÝL RÜÞVETÝ ALDI VE GÝTTÝ. HASTA KURTULDU.");
+            // Hastayý biraz iyileþtir ki hemen tekrar ölmesin
+            patient.Heal(20f);
+            return; // Savaþ baþlatmadan çýk
+        }
 
         currentPatient = patient;
 
@@ -90,14 +119,14 @@ public class AzraelArenaManager : NetworkBehaviour
         ulong chosenId = clientIds[Random.Range(0, clientIds.Count)];
         fightingPlayerId.Value = chosenId;
 
-        // Rastgele Mod Seç (1 ile 6 arasý)
+        // Rastgele Mod Seç (1-6)
         int selectedMode = Random.Range(1, 7);
         fightMode.Value = selectedMode;
 
-        // Modlara göre hazýrlýk (Server tarafý)
+        // Hazýrlýklar
         if (selectedMode == 3) shockSuccessCount = 0;
         if (selectedMode == 6) { bloodSuccessCount = 0; PickNewQTEKey(); }
-        if (selectedMode == 5) StartCoroutine(MorgueAzraelRoutine()); // Azrail döngüsünü baþlat
+        if (selectedMode == 5) StartCoroutine(MorgueAzraelRoutine());
 
         TeleportPlayerClientRpc(chosenId, selectedMode);
     }
@@ -105,7 +134,7 @@ public class AzraelArenaManager : NetworkBehaviour
     // --- MOD 1: BOKS ---
     void UpdateBoxingMode()
     {
-        commonSlider.gameObject.SetActive(true); // Can barý olarak kullan
+        commonSlider.gameObject.SetActive(true);
         if (Input.GetMouseButtonDown(0)) AttackServerRpc(10);
     }
 
@@ -123,24 +152,27 @@ public class AzraelArenaManager : NetworkBehaviour
         }
     }
 
-    // --- MOD 3: ÞOK CÝHAZI (DEFIBRILATOR) ---
+    // --- MOD 3: ÞOK CÝHAZI (PÝL EKLENDÝ) ---
     void UpdateShockMode()
     {
         commonSlider.gameObject.SetActive(true);
-        // Ýbre sürekli 0 ile 1 arasý gidip gelir (PingPong)
         shockValue = Mathf.PingPong(Time.time * 2.5f, 1f);
         commonSlider.value = shockValue;
 
         if (Input.GetKeyDown(KeyCode.Space))
         {
-            // Yeþil Alan: 0.4 ile 0.6 arasý
-            if (shockValue > 0.4f && shockValue < 0.6f)
+            // PÝL KONTROLÜ (YENÝ)
+            // Normalde hata payý 0.1 (0.4 - 0.6 arasý)
+            // Pil varsa hata payý 0.2 (0.3 - 0.7 arasý) -> Çok daha kolay olur
+            float margin = batteryUpgraded ? 0.2f : 0.1f;
+
+            if (shockValue > (0.5f - margin) && shockValue < (0.5f + margin))
             {
                 SubmitShockServerRpc(true);
             }
             else
             {
-                SubmitShockServerRpc(false); // Yanlýþ bastýn
+                SubmitShockServerRpc(false);
             }
         }
     }
@@ -151,31 +183,24 @@ public class AzraelArenaManager : NetworkBehaviour
         if (success)
         {
             shockSuccessCount++;
-            if (shockSuccessCount >= 4) EndFight(true); // 4 kere yapan kazanýr
+            if (shockSuccessCount >= 4) EndFight(true);
         }
         else
         {
-            // Yanlýþ basarsan ceza (veya direkt kayýp)
             EndFight(false);
         }
     }
 
-    // --- MOD 4: TÜNEL KOÞUSU (RUNNER) ---
+    // --- MOD 4: RUNNER ---
     void UpdateRunnerMode()
     {
-        // Karakteri otomatik ileri koþtur
         var player = NetworkManager.Singleton.LocalClient.PlayerObject;
         player.transform.Translate(Vector3.forward * 6f * Time.deltaTime);
-
-        // A ve D ile saða sola kaçýþ (Basitçe)
         float moveX = Input.GetAxis("Horizontal") * 5f * Time.deltaTime;
         player.transform.Translate(Vector3.right * moveX);
-
-        // Engel çarpýþmasýný Player üzerindeki Collider halleder veya buraya Raycast koyabilirsin.
-        // Bitiþ çizgisine varýrsa kazanýr (Trigger ile kontrol edilir).
     }
 
-    // --- MOD 5: MORG (RED LIGHT / GREEN LIGHT) ---
+    // --- MOD 5: MORG ---
     void UpdateMorgueMode()
     {
         infoText.text = isAzraelLooking.Value ? "DON! KIPIRDAMA!" : "YÜRÜ (W)";
@@ -183,14 +208,11 @@ public class AzraelArenaManager : NetworkBehaviour
 
         if (isAzraelLooking.Value)
         {
-            // Eðer Azrail bakarken hareket ediyorsan (W,A,S,D basýlýysa)
             if (Input.GetAxis("Vertical") != 0 || Input.GetAxis("Horizontal") != 0)
             {
                 FailMorgueServerRpc();
             }
         }
-
-        // Hedefe ulaþýrsan kazanmayý Trigger ile kontrol et (MorgExit scripti yapýp EndFight çaðýrabilirsin)
     }
 
     [ServerRpc(RequireOwnership = false)]
@@ -199,19 +221,18 @@ public class AzraelArenaManager : NetworkBehaviour
         EndFight(false);
     }
 
-    // Server tarafýnda Azrail'i döndürüp duran Coroutine
     IEnumerator MorgueAzraelRoutine()
     {
         while (fightMode.Value == 5)
         {
-            yield return new WaitForSeconds(Random.Range(2f, 4f)); // 2-4 sn arkasý dönük
-            isAzraelLooking.Value = true; // DÖNDÜ!
-            yield return new WaitForSeconds(Random.Range(1f, 2f)); // 1-2 sn bakýyor
-            isAzraelLooking.Value = false; // ARKASINI DÖNDÜ
+            yield return new WaitForSeconds(Random.Range(2f, 4f));
+            isAzraelLooking.Value = true;
+            yield return new WaitForSeconds(Random.Range(1f, 2f));
+            isAzraelLooking.Value = false;
         }
     }
 
-    // --- MOD 6: KAN NAKLÝ (QTE / BUTTON MASHING) ---
+    // --- MOD 6: KAN NAKLÝ ---
     void UpdateBloodMode()
     {
         infoText.text = "BAS: " + currentQTEKey.ToString();
@@ -219,30 +240,21 @@ public class AzraelArenaManager : NetworkBehaviour
 
         if (qteTimer <= 0)
         {
-            SubmitBloodServerRpc(false); // Süre bitti, kaybettin
+            SubmitBloodServerRpc(false);
             return;
         }
 
         if (Input.anyKeyDown)
         {
-            if (Input.GetKeyDown(currentQTEKey))
-            {
-                SubmitBloodServerRpc(true); // Doðru tuþ
-            }
-            else
-            {
-                SubmitBloodServerRpc(false); // Yanlýþ tuþ
-            }
+            if (Input.GetKeyDown(currentQTEKey)) SubmitBloodServerRpc(true);
+            else SubmitBloodServerRpc(false);
         }
     }
 
     void PickNewQTEKey()
     {
-        // Rastgele tuþ seç (W, A, S, D, Space)
         KeyCode[] keys = { KeyCode.W, KeyCode.A, KeyCode.S, KeyCode.D, KeyCode.Space };
         KeyCode newKey = keys[Random.Range(0, keys.Length)];
-
-        // Client'a bildir
         SyncQTEClientRpc(newKey);
     }
 
@@ -250,7 +262,7 @@ public class AzraelArenaManager : NetworkBehaviour
     void SyncQTEClientRpc(KeyCode key)
     {
         currentQTEKey = key;
-        qteTimer = 2.0f; // Her tuþ için 2 saniyen var
+        qteTimer = 2.0f;
     }
 
     [ServerRpc(RequireOwnership = false)]
@@ -259,8 +271,8 @@ public class AzraelArenaManager : NetworkBehaviour
         if (success)
         {
             bloodSuccessCount++;
-            if (bloodSuccessCount >= 6) EndFight(true); // 6 tuþ bilen kazanýr
-            else PickNewQTEKey(); // Sýradaki tuþa geç
+            if (bloodSuccessCount >= 6) EndFight(true);
+            else PickNewQTEKey();
         }
         else
         {
@@ -268,17 +280,14 @@ public class AzraelArenaManager : NetworkBehaviour
         }
     }
 
-    // --- ORTAK SALDIRI VE BÝTÝÞ ---
+    // --- ORTAK ---
     [ServerRpc(RequireOwnership = false)]
     void AttackServerRpc(float damage)
     {
-        // Boks ve Silah modu için basit can düþme
-        // (Burada Azrail caný deðiþkeni eklenebilir ama basit tuttum)
-        // Þimdilik 5 vuruþta ölsün mantýðý:
-        if (Random.Range(0, 100) > 80) EndFight(true); // %20 þansla kritik atýp bitirme (Örnek)
+        if (Random.Range(0, 100) > 80) EndFight(true);
     }
 
-    public void WinByReachGoal() // Runner ve Morg için bitiþ çizgisi çaðýrýr
+    public void WinByReachGoal()
     {
         if (IsServer) EndFight(true);
     }
@@ -306,28 +315,26 @@ public class AzraelArenaManager : NetworkBehaviour
     [ClientRpc]
     void TeleportPlayerClientRpc(ulong targetId, int mode)
     {
-        CloseAllProps(); // Önce her þeyi gizle
+        CloseAllProps();
 
         if (NetworkManager.Singleton.LocalClientId != targetId) return;
 
-        // Pozisyon Kaydet
         var playerObj = NetworkManager.Singleton.LocalClient.PlayerObject;
         playerOriginalPos = playerObj.transform.position;
         CharacterController cc = playerObj.GetComponent<CharacterController>();
         if (cc) cc.enabled = false;
 
-        // Iþýnla ve Mod Yazýsýný Ayarla
         Transform targetPos = null;
         string msg = "";
 
         switch (mode)
         {
-            case 1: targetPos = boxingSpawnPoint; boxingAzrael.SetActive(true); msg = "BOX MATCH"; break;
-            case 2: targetPos = gunSpawnPoint; gunAzrael.SetActive(true); msg = "FIGHT!"; break;
-            case 3: targetPos = shockSpawnPoint; shockMachine.SetActive(true); msg = "SHOCK DUEL"; break;
-            case 4: targetPos = runnerSpawnPoint; runnerAzrael.SetActive(true); msg = "DEATH TUNNEL!"; break;
-            case 5: targetPos = morgueSpawnPoint; morgueAzrael.SetActive(true); msg = "WELCOME TO THE MORGUE. BE QUIET."; break;
-            case 6: targetPos = bloodSpawnPoint; bloodBag.SetActive(true); msg = "BLOOD TRANSFER!"; break;
+            case 1: targetPos = boxingSpawnPoint; boxingAzrael.SetActive(true); msg = "BOKS MAÇI!"; break;
+            case 2: targetPos = gunSpawnPoint; gunAzrael.SetActive(true); msg = "ÇATIÞMA!"; break;
+            case 3: targetPos = shockSpawnPoint; shockMachine.SetActive(true); msg = "ÞOK DÜELLOSU!"; break;
+            case 4: targetPos = runnerSpawnPoint; runnerAzrael.SetActive(true); msg = "ÖLÜM TÜNELÝ!"; break;
+            case 5: targetPos = morgueSpawnPoint; morgueAzrael.SetActive(true); msg = "MORGA HOÞ GELDÝN."; break;
+            case 6: targetPos = bloodSpawnPoint; bloodBag.SetActive(true); msg = "KAN NAKLÝ!"; break;
         }
 
         if (targetPos != null)

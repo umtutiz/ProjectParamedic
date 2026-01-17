@@ -67,6 +67,18 @@ public class PlayerGrab : NetworkBehaviour
                 holdPoint.localPosition = localPos;
             }
         }
+
+        // SAÐ TIK: EÞYAYI KULLAN
+        if (Input.GetMouseButtonDown(1) && currentGrabbedObject != null)
+        {
+            // Elimizdeki þey bir "Tüketilebilir Eþya" mý?
+            ConsumableItem item = currentGrabbedObject.GetComponent<ConsumableItem>();
+            if (item != null)
+            {
+                // Kullan!
+                item.UseItem(gameObject);
+            }
+        }
     }
 
     void FixedUpdate()

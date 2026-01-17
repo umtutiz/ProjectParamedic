@@ -59,6 +59,22 @@ public class AzraelArenaManager : NetworkBehaviour
 
     private void Awake() { if (Instance == null) Instance = this; }
 
+    // ... Awake fonksiyonundan hemen sonra ...
+
+    void Start()
+    {
+        // 1. UI PANELÝNÝ ZORLA KAPAT
+        if (fightPanel != null) fightPanel.SetActive(false);
+
+        // 2. SÝLAHI ZORLA KAPAT
+        if (fakeGunModel != null) fakeGunModel.SetActive(false);
+
+        // 3. SAHNEDEKÝ TÜM AZRAÝLLERÝ KAPAT
+        CloseAllProps();
+    }
+
+    // ... OnNetworkSpawn diye devam ediyor ...
+
     public override void OnNetworkSpawn()
     {
         fightPanel.SetActive(false);

@@ -59,8 +59,6 @@ public class AzraelArenaManager : NetworkBehaviour
 
     private void Awake() { if (Instance == null) Instance = this; }
 
-    // ... Awake fonksiyonundan hemen sonra ...
-
     void Start()
     {
         // 1. UI PANELÝNÝ ZORLA KAPAT
@@ -72,8 +70,6 @@ public class AzraelArenaManager : NetworkBehaviour
         // 3. SAHNEDEKÝ TÜM AZRAÝLLERÝ KAPAT
         CloseAllProps();
     }
-
-    // ... OnNetworkSpawn diye devam ediyor ...
 
     public override void OnNetworkSpawn()
     {
@@ -98,7 +94,7 @@ public class AzraelArenaManager : NetworkBehaviour
         }
     }
 
-    // --- MARKET SÝSTEMÝNDEN ÇAÐRILANLAR (YENÝ) ---
+    // --- MARKET SÝSTEMÝNDEN ÇAÐRILANLAR ---
 
     public void EnableBribeMode()
     {
@@ -118,12 +114,11 @@ public class AzraelArenaManager : NetworkBehaviour
     {
         if (!IsServer) return;
 
-        // 1. RÜÞVET KONTROLÜ (YENÝ)
+        // 1. RÜÞVET KONTROLÜ
         if (bribeActive)
         {
             bribeActive = false; // Hakký kullandýk, sýfýrla
             Debug.Log("AZRAÝL RÜÞVETÝ ALDI VE GÝTTÝ. HASTA KURTULDU.");
-            // Hastayý biraz iyileþtir ki hemen tekrar ölmesin
             patient.Heal(20f);
             return; // Savaþ baþlatmadan çýk
         }
@@ -151,7 +146,13 @@ public class AzraelArenaManager : NetworkBehaviour
     void UpdateBoxingMode()
     {
         commonSlider.gameObject.SetActive(true);
-        if (Input.GetMouseButtonDown(0)) AttackServerRpc(10);
+        if (Input.GetMouseButtonDown(0))
+        {
+            // <--- KAMERA SARSINTISI (YUMRUK) --->
+            if (CameraShake.Instance != null) CameraShake.Instance.Shake(0.15f, 0.4f);
+
+            AttackServerRpc(10);
+        }
     }
 
     // --- MOD 2: SÝLAH ---
@@ -160,6 +161,9 @@ public class AzraelArenaManager : NetworkBehaviour
         fakeGunModel.SetActive(true);
         if (Input.GetMouseButtonDown(0))
         {
+            // <--- KAMERA SARSINTISI (TEPME) --->
+            if (CameraShake.Instance != null) CameraShake.Instance.Shake(0.1f, 0.2f);
+
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
             if (Physics.Raycast(ray, out RaycastHit hit))
             {
@@ -168,7 +172,7 @@ public class AzraelArenaManager : NetworkBehaviour
         }
     }
 
-    // --- MOD 3: ÞOK CÝHAZI (PÝL EKLENDÝ) ---
+    // --- MOD 3: ÞOK CÝHAZI ---
     void UpdateShockMode()
     {
         commonSlider.gameObject.SetActive(true);
@@ -177,9 +181,9 @@ public class AzraelArenaManager : NetworkBehaviour
 
         if (Input.GetKeyDown(KeyCode.Space))
         {
-            // PÝL KONTROLÜ (YENÝ)
-            // Normalde hata payý 0.1 (0.4 - 0.6 arasý)
-            // Pil varsa hata payý 0.2 (0.3 - 0.7 arasý) -> Çok daha kolay olur
+            // <--- KAMERA SARSINTISI (ELEKTRÝK) --->
+            if (CameraShake.Instance != null) CameraShake.Instance.Shake(0.1f, 0.3f);
+
             float margin = batteryUpgraded ? 0.2f : 0.1f;
 
             if (shockValue > (0.5f - margin) && shockValue < (0.5f + margin))

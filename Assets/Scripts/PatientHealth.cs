@@ -35,9 +35,10 @@ public class PatientHealth : NetworkBehaviour
         {
             if (isDead.Value) return;
 
+            // Zamanla can azalmasý (Saniyede 1 saniye)
             currentLifeTime.Value -= Time.deltaTime;
 
-            // --- YENÝ EKLENEN KISIM: AZRAÝL KONTROLÜ ---
+            // --- AZRAÝL KONTROLÜ ---
             // Eðer süre 15 saniyenin altýna düþtüyse ve Azrail daha önce gelmediyse
             if (currentLifeTime.Value <= 15f && !azraelTriggered)
             {
@@ -50,8 +51,8 @@ public class PatientHealth : NetworkBehaviour
                     AzraelArenaManager.Instance.StartAzraelEvent(this);
                 }
             }
-            // -------------------------------------------
 
+            // Ölüm Kontrolü
             if (currentLifeTime.Value <= 0)
             {
                 currentLifeTime.Value = 0;
@@ -70,7 +71,26 @@ public class PatientHealth : NetworkBehaviour
         }
     }
 
-    // --- YENÝ EKLENEN: AZRAÝL SAVAÞI KAZANILIRSA ÇAÐRILACAK ---
+    // --- EKSÝK OLAN KISIM BURASIYDI: HASAR ALMA ---
+    // Arabalar ve Sedye çarpmalarý bu fonksiyonu çaðýrýr
+    public void TakeDamage(float amount)
+    {
+        if (!IsServer) return; // Sadece Server can azaltabilir
+        if (isDead.Value) return; // Ölüye vurulmaz
+
+        currentLifeTime.Value -= amount;
+        Debug.Log($"HASTA HASAR ALDI: -{amount} | Kalan: {currentLifeTime.Value}");
+
+        // Hasar sonucu ölürse
+        if (currentLifeTime.Value <= 0)
+        {
+            currentLifeTime.Value = 0;
+            Die();
+        }
+    }
+    // ------------------------------------------------
+
+    // --- AZRAÝL SAVAÞI KAZANILIRSA ÇAÐRILACAK ---
     public void Heal(float amount)
     {
         if (!IsServer) return;
@@ -82,7 +102,7 @@ public class PatientHealth : NetworkBehaviour
         if (currentLifeTime.Value > 15f) azraelTriggered = false;
     }
 
-    // --- YENÝ EKLENEN: AZRAÝL SAVAÞI KAYBEDÝLÝRSE ÇAÐRILACAK ---
+    // --- AZRAÝL SAVAÞI KAYBEDÝLÝRSE ÇAÐRILACAK ---
     public void KillPatient()
     {
         if (!IsServer) return;
@@ -94,12 +114,7 @@ public class PatientHealth : NetworkBehaviour
     {
         isDead.Value = true;
 
-        // Eðer Azrail sahnesindeysek oradan da temizleyelim (Opsiyonel)
-
         DieClientRpc();
-
-        // Ýstersen hastayý komple yok et:
-        // GetComponent<NetworkObject>().Despawn();
     }
 
     [ClientRpc]

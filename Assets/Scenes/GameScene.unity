@@ -11558,7 +11558,7 @@ PrefabInstance:
         type: 3}
       propertyPath: patientHoldPoint
       value: 
-      objectReference: {fileID: 1975530727}
+      objectReference: {fileID: 0}
     - target: {fileID: 606232156894837308, guid: d7b64ef1062b4e7439dd6f8fc3f173a1,
         type: 3}
       propertyPath: isFull.m_InternalValue

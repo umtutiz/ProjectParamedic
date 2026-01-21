@@ -17,6 +17,7 @@ GameObject:
   - component: {fileID: -4916338915439770142}
   - component: {fileID: -2394120327792931675}
   - component: {fileID: 2913353686226039771}
+  - component: {fileID: -3119848949088103241}
   m_Layer: 0
   m_Name: Sedye
   m_TagString: Untagged
@@ -219,3 +220,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 754c6e44df2dfd7418930c0537ac23bf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &-3119848949088103241
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4829826444019478566}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ffb785438addae840917c5f88202bed2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  damageThreshold: 5
+  damageMultiplier: 2
+  cooldown: 0.5
